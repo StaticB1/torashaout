@@ -36,18 +36,34 @@ export function Navbar({ currency, onCurrencyChange }: NavbarProps) {
             <Link href="/how-it-works" className="text-gray-300 hover:text-white transition">
               How It Works
             </Link>
+            <Link href="/about" className="text-gray-300 hover:text-white transition">
+              About
+            </Link>
             <Link href="/business" className="text-gray-300 hover:text-white transition">
               For Business
             </Link>
-            
-            <select 
-              value={currency}
-              onChange={(e) => onCurrencyChange(e.target.value as Currency)}
-              className="bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-1.5 text-sm cursor-pointer"
-            >
-              <option value="USD">USD ($)</option>
-              <option value="ZIG">ZIG</option>
-            </select>
+            <Link href="/join" className="text-gray-300 hover:text-white transition">
+              Join as Talent
+            </Link>
+
+            <div className="relative">
+              <select
+                value={currency}
+                onChange={(e) => onCurrencyChange(e.target.value as Currency)}
+                className="appearance-none bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 rounded-lg px-4 py-2 pr-8 text-sm font-medium cursor-pointer hover:border-purple-400 transition focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                style={{
+                  colorScheme: 'dark'
+                }}
+              >
+                <option value="USD" className="bg-gray-900 text-white py-2">USD ($)</option>
+                <option value="ZIG" className="bg-gray-900 text-white py-2">ZIG</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-purple-400">
+                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
             
             <Button size="sm" variant="primary">
               Sign In
@@ -75,29 +91,53 @@ export function Navbar({ currency, onCurrencyChange }: NavbarProps) {
             >
               Browse Talent
             </Link>
-            <Link 
-              href="/how-it-works" 
+            <Link
+              href="/how-it-works"
               className="block text-gray-300 hover:text-white py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               How It Works
             </Link>
-            <Link 
-              href="/business" 
+            <Link
+              href="/about"
+              className="block text-gray-300 hover:text-white py-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              About
+            </Link>
+            <Link
+              href="/business"
               className="block text-gray-300 hover:text-white py-2"
               onClick={() => setMobileMenuOpen(false)}
             >
               For Business
             </Link>
-            
-            <select 
-              value={currency}
-              onChange={(e) => onCurrencyChange(e.target.value as Currency)}
-              className="w-full bg-purple-900/30 border border-purple-700/50 rounded-lg px-3 py-2"
+            <Link
+              href="/join"
+              className="block text-gray-300 hover:text-white py-2"
+              onClick={() => setMobileMenuOpen(false)}
             >
-              <option value="USD">USD ($)</option>
-              <option value="ZIG">ZIG</option>
-            </select>
+              Join as Talent
+            </Link>
+
+            <div className="relative">
+              <select
+                value={currency}
+                onChange={(e) => onCurrencyChange(e.target.value as Currency)}
+                className="w-full appearance-none bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 rounded-lg px-4 py-3 pr-10 font-medium cursor-pointer hover:border-purple-400 transition focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                style={{
+                  colorScheme: 'dark'
+                }}
+              >
+                <option value="USD" className="bg-gray-900 text-white py-2">USD ($)</option>
+                <option value="ZIG" className="bg-gray-900 text-white py-2">ZIG</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-purple-400">
+                <svg className="h-5 w-5 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                </svg>
+              </div>
+            </div>
             
             <Button className="w-full">
               Sign In

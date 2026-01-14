@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Search, Play, Zap, ChevronRight, Shield, Clock, TrendingUp, Star } from 'lucide-react';
 import { Currency } from '@/types';
 import { mockTalentProfiles, categories } from '@/lib/mock-data';
@@ -217,9 +218,122 @@ export default function HomePage() {
             <p className="text-xl text-gray-300 mb-8">
               Over 10,000 videos delivered. Join thousands of happy customers worldwide.
             </p>
-            <Button size="lg">
-              Browse All Talent
-            </Button>
+            <Link href="/browse">
+              <Button size="lg">
+                Browse All Talent
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Join as Talent Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-purple-950/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <div className="space-y-6">
+              <div className="inline-flex items-center space-x-2 bg-pink-900/30 border border-pink-700/50 rounded-full px-4 py-2">
+                <Star size={16} className="text-pink-400" />
+                <span className="text-sm text-gray-300">For Celebrities & Influencers</span>
+              </div>
+
+              <h2 className="text-4xl md:text-5xl font-bold">
+                Are You a <span className="text-gradient-brand">Celebrity?</span>
+              </h2>
+
+              <p className="text-xl text-gray-400">
+                Join Zimbabwe&apos;s top talent on ToraShaout and earn money by creating personalized video messages for your fans. Set your own prices and work on your schedule.
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <TrendingUp size={20} className="text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Earn Extra Income</h3>
+                    <p className="text-sm text-gray-400">Set your own rates and get paid for every video</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-pink-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Clock size={20} className="text-pink-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Work Your Schedule</h3>
+                    <p className="text-sm text-gray-400">Accept requests when it suits you</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Star size={20} className="text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Build Your Brand</h3>
+                    <p className="text-sm text-gray-400">Connect directly with fans worldwide</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-pink-600/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Shield size={20} className="text-pink-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Full Support</h3>
+                    <p className="text-sm text-gray-400">Dedicated team to help you succeed</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-4">
+                <Link href="/join">
+                  <Button size="lg">
+                    Apply to Join
+                  </Button>
+                </Link>
+                <Link href="/join">
+                  <Button size="lg" variant="outline">
+                    Learn More
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right Content - Stats */}
+            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-2xl p-8 md:p-12">
+              <h3 className="text-2xl font-bold mb-8 text-center">Platform Stats</h3>
+              <div className="grid grid-cols-2 gap-8">
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">500+</div>
+                  <div className="text-sm text-gray-400">Active Talent</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-bold text-pink-400 mb-2">10K+</div>
+                  <div className="text-sm text-gray-400">Videos Delivered</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">$2M+</div>
+                  <div className="text-sm text-gray-400">Earned by Talent</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl md:text-5xl font-bold text-pink-400 mb-2">4.9★</div>
+                  <div className="text-sm text-gray-400">Average Rating</div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-purple-700/50">
+                <p className="text-center text-gray-300 mb-4 italic">
+                  "ToraShaout has completely changed how I connect with my fans. I&apos;ve made over $5,000 in just three months!"
+                </p>
+                <div className="text-center">
+                  <div className="font-semibold">Winky D</div>
+                  <div className="text-sm text-gray-400">Musician</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

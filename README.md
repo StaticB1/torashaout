@@ -25,6 +25,7 @@ A premium two-sided marketplace connecting Zimbabwean celebrities with fans glob
 ### Option 2: Local Development
 
 #### Prerequisites
+
 - Node.js 18+ installed
 - npm or yarn package manager
 
@@ -49,33 +50,50 @@ npm run dev
 ## 📁 Project Structure
 
 ```
-torashaout-nextjs/
-├── app/                      # Next.js 14 App Router
-│   ├── layout.tsx           # Root layout with metadata
-│   ├── page.tsx             # Homepage
-│   └── globals.css          # Global styles with Tailwind
+torashaout/
+├── app/                          # Next.js 14 App Router
+│   ├── layout.tsx               # Root layout with metadata
+│   ├── page.tsx                 # Landing page
+│   ├── globals.css              # Global styles with Tailwind
+│   ├── browse/                  # Browse talent catalog
+│   │   └── page.tsx
+│   ├── talent/[id]/             # Individual talent profiles
+│   │   └── page.tsx
+│   ├── checkout/                # Payment & booking
+│   │   └── page.tsx
+│   ├── booking/[id]/            # Booking confirmation & tracking
+│   │   └── page.tsx
+│   ├── how-it-works/            # Platform explanation
+│   │   └── page.tsx
+│   ├── faq/                     # Frequently asked questions
+│   │   └── page.tsx
+│   ├── business/                # Business solutions
+│   │   └── page.tsx
+│   └── join/                    # Talent application
+│       └── page.tsx
 │
-├── components/              # React components
-│   ├── ui/                  # Reusable UI components
-│   │   └── Button.tsx       # Primary button component
-│   ├── Navbar.tsx           # Navigation with currency switcher
-│   ├── Footer.tsx           # Site footer
-│   └── TalentCard.tsx       # Talent profile card
+├── components/                   # React components
+│   ├── ui/                      # Reusable UI components
+│   │   └── Button.tsx           # Primary button component
+│   ├── Navbar.tsx               # Navigation with currency switcher
+│   ├── Footer.tsx               # Site footer with social links
+│   ├── TalentCard.tsx           # Talent profile card
+│   └── BookingForm.tsx          # Reusable booking form
 │
-├── lib/                     # Utility functions
-│   ├── utils.ts             # Helper functions (cn, formatCurrency)
-│   └── mock-data.ts         # Mock data for development
+├── lib/                         # Utility functions
+│   ├── utils.ts                 # Helper functions (cn, formatCurrency)
+│   └── mock-data.ts             # Mock data for development
 │
-├── types/                   # TypeScript type definitions
-│   └── index.ts             # All app types (User, Talent, Booking, etc.)
+├── types/                       # TypeScript type definitions
+│   └── index.ts                 # All app types (User, Talent, Booking, etc.)
 │
-├── public/                  # Static assets
-│   └── images/              # Images folder
+├── public/                      # Static assets
+│   └── images/                  # Images folder
 │
-├── tailwind.config.ts       # Tailwind configuration (brand colors)
-├── tsconfig.json            # TypeScript configuration
-├── next.config.js           # Next.js configuration
-└── package.json             # Dependencies and scripts
+├── tailwind.config.ts           # Tailwind configuration (brand colors)
+├── tsconfig.json                # TypeScript configuration
+├── next.config.js               # Next.js configuration
+└── package.json                 # Dependencies and scripts
 ```
 
 ---
@@ -95,49 +113,84 @@ className="text-gradient-brand" // Gradient text utility
 ```
 
 ### Typography
+
 - Font: Inter (Google Fonts)
 - Headings: Bold, 2xl-7xl
 - Body: Regular, base-xl
 
 ### Components
-- **Button**: 3 variants (primary, secondary, outline) + 3 sizes
-- **TalentCard**: Hover animations, rating badges, responsive pricing
-- **Navbar**: Mobile-first with hamburger menu
-- **Footer**: 4-column layout with links
+
+- **Button**: 3 variants (primary, outline, ghost) + 3 sizes (sm, md, lg)
+- **TalentCard**: Hover animations, rating badges, responsive pricing, verified badge
+- **Navbar**: Mobile-first with hamburger menu, currency switcher, "Join as Talent" link
+- **Footer**: 4-column layout with links, social media icons (X, Instagram, Facebook, WhatsApp, Email)
+- **BookingForm**: Reusable form with validation for booking requests
 
 ---
 
 ## 🔧 Key Features Implemented
 
-### ✅ Phase 1 (Current)
-- [x] Landing page with hero section
-- [x] Talent discovery grid (with mock data)
-- [x] Category browsing
-- [x] Currency switcher (USD ↔ ZIG)
-- [x] Responsive navigation
-- [x] Mobile-optimized design
+### ✅ Phase 1 - Frontend (Completed)
+
+**Pages:**
+- [x] Landing page with hero, categories, featured talent, and "Join as Talent" CTA
+- [x] Browse talent catalog with search, filters, and sorting
+- [x] Individual talent profile pages (`/talent/[id]`)
+- [x] Checkout page with booking form and payment method selection
+- [x] Booking confirmation and tracking page (`/booking/[id]`)
+- [x] How It Works - 4-step process explanation with FAQ
+- [x] FAQ page - 35 questions across 6 categories with search
+- [x] For Business - B2B features, use cases, pricing tiers
+- [x] Join as Talent - Comprehensive application form
+
+**Core Features:**
+- [x] Dual currency switcher (USD ↔ ZIG) in navigation
+- [x] Responsive navigation with mobile hamburger menu
+- [x] Mobile-first responsive design
+- [x] Dark theme with purple/pink gradient branding
 - [x] TypeScript types for all entities
 - [x] Reusable component library
+- [x] Social media integration in footer
+- [x] Mock data for development
+- [x] Category filtering and talent search
+- [x] Rating and review system (UI ready)
 
-### 🚧 Phase 2 (Next Steps)
-- [ ] Talent profile page (`/talent/[id]`)
-- [ ] Booking flow (multi-step form)
-- [ ] Payment integration (Paynow + Stripe)
-- [ ] Customer dashboard
-- [ ] Talent dashboard
-- [ ] Admin panel
+### 🚧 Phase 2 - Backend & Authentication (Next Steps)
+
+- [ ] User authentication (NextAuth.js or Clerk)
+- [ ] Database setup (PostgreSQL + Prisma or Supabase)
+- [ ] API routes for talents, bookings, payments
+- [ ] Payment integration (Paynow + Stripe + Innbucks)
+- [ ] File upload for videos (Cloudflare Stream or S3)
+- [ ] Email notifications (SendGrid or Resend)
+- [ ] WhatsApp notifications
+
+### 🚧 Phase 3 - Dashboards (Future)
+
+- [ ] Customer dashboard (order history, favorites)
+- [ ] Talent dashboard (requests, earnings, analytics)
+- [ ] Admin panel (verification, moderation, analytics)
+
+### 🚧 Phase 4 - Advanced Features (Future)
+
+- [ ] Video review and approval system
+- [ ] Refund processing automation
+- [ ] Gift card system
+- [ ] Analytics and reporting
+- [ ] SEO optimization
+- [ ] Performance monitoring
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Category | Technology | Why? |
-|----------|------------|------|
-| **Framework** | Next.js 14 | Server-side rendering, App Router, Image optimization |
-| **Language** | TypeScript | Type safety, better DX |
-| **Styling** | Tailwind CSS | Utility-first, responsive design |
-| **Icons** | Lucide React | Lightweight, tree-shakeable |
-| **State** | React Hooks | Built-in, no external library needed |
+| Category      | Technology   | Why?                                                  |
+| ------------- | ------------ | ----------------------------------------------------- |
+| **Framework** | Next.js 14   | Server-side rendering, App Router, Image optimization |
+| **Language**  | TypeScript   | Type safety, better DX                                |
+| **Styling**   | Tailwind CSS | Utility-first, responsive design                      |
+| **Icons**     | Lucide React | Lightweight, tree-shakeable                           |
+| **State**     | React Hooks  | Built-in, no external library needed                  |
 
 ---
 
@@ -156,12 +209,14 @@ xl: 1280px  /* Large desktop */
 ## 🎯 Performance Optimizations
 
 ### Built-in Next.js Features
+
 - **Automatic Code Splitting**: Only load JS for current page
 - **Image Optimization**: WebP/AVIF with lazy loading
 - **Server Components**: Reduce client-side JavaScript
 - **Edge Functions**: Deploy close to users
 
 ### Tailwind CSS
+
 - **Purge Unused CSS**: Production builds only include used classes
 - **JIT Compiler**: On-demand generation of utility classes
 
@@ -176,8 +231,8 @@ The app automatically detects user location and displays prices in USD or ZIG:
 const price = currency === 'USD' ? talent.priceUSD : talent.priceZIG;
 
 // Format with utility
-formatCurrency(50, 'USD') // "$50.00"
-formatCurrency(2500, 'ZIG') // "ZIG 2,500"
+formatCurrency(50, 'USD'); // "$50.00"
+formatCurrency(2500, 'ZIG'); // "ZIG 2,500"
 ```
 
 ---
@@ -229,6 +284,7 @@ vercel
 ```
 
 ### Environment Variables
+
 Create `.env.local` for API keys:
 
 ```env
@@ -260,10 +316,13 @@ All TypeScript types are defined in `types/index.ts`:
 .text-gradient-brand
 
 /* Background gradient */
+/* Background gradient */
+/* Background gradient */
+/* Background gradient */
 .bg-gradient-brand
 
 /* Border with purple glow */
-.border-gradient
+.border-gradient;
 ```
 
 ---
@@ -273,6 +332,7 @@ All TypeScript types are defined in `types/index.ts`:
 ### Adding a New Page
 
 1. Create file in `app/` directory:
+
    ```typescript
    // app/browse/page.tsx
    export default function BrowsePage() {
@@ -285,6 +345,7 @@ All TypeScript types are defined in `types/index.ts`:
 ### Adding a New Component
 
 1. Create component in `components/`:
+
    ```typescript
    // components/BookingForm.tsx
    export function BookingForm() {
@@ -300,6 +361,7 @@ All TypeScript types are defined in `types/index.ts`:
 ## 🐛 Troubleshooting
 
 ### Port 3000 already in use
+
 ```bash
 # Kill process on port 3000
 npx kill-port 3000
@@ -309,6 +371,7 @@ npm run dev -- -p 3001
 ```
 
 ### TypeScript errors
+
 ```bash
 # Rebuild TypeScript cache
 rm -rf .next
@@ -316,6 +379,7 @@ npm run dev
 ```
 
 ### Module not found
+
 ```bash
 # Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
@@ -327,38 +391,100 @@ npm install
 ## 📧 Support
 
 For questions or issues, contact:
-- Email: support@torashaout.com
-- WhatsApp: +263...
+
+- Email: bsiwonde@gmail.com
+- WhatsApp: +821048370343
 
 ---
 
 ## 📄 License
 
 © 2026 ToraShaout. All rights reserved.
+© 2026 StatoTech. All rights reserved.
 
 ---
 
 ## 🎯 Next Development Phases
 
-### Phase 2: Talent Profiles
-- Individual talent pages
-- Video preview player
-- Booking form with occasion selector
+### Phase 2: Backend Setup (Priority)
 
-### Phase 3: Payment Integration
-- Paynow setup (EcoCash, OneMoney)
-- Stripe integration (cards, Apple Pay)
-- InnBucks for remittances
+**Authentication & Database:**
+- Set up NextAuth.js or Clerk for authentication
+- Configure PostgreSQL database with Prisma ORM
+- Create API routes for CRUD operations
+- Implement role-based access control (Fan, Talent, Admin)
 
-### Phase 4: Dashboards
-- Customer order tracking
-- Talent request management
-- Admin verification panel
+**Payment Integration:**
+- Paynow integration (EcoCash, OneMoney)
+- Stripe setup (international cards, Apple Pay, Google Pay)
+- Innbucks integration for USD payments
+- Payment webhook handlers for order updates
 
-### Phase 5: Video Infrastructure
-- Cloudflare Stream integration
-- Adaptive bitrate delivery
-- WhatsApp notification system
+**Core API Endpoints:**
+```
+/api/auth/*          - Authentication
+/api/talents         - List and filter talents
+/api/talents/[id]    - Talent details
+/api/bookings        - Create and list bookings
+/api/bookings/[id]   - Booking details and status
+/api/payments        - Payment processing
+/api/uploads         - Video upload handling
+```
+
+### Phase 3: Video Infrastructure
+
+- Cloudflare Stream or AWS S3 for video storage
+- Video upload and processing pipeline
+- Adaptive bitrate delivery (HLS/DASH)
+- Video thumbnail generation
+- Download and streaming URLs with expiration
+
+### Phase 4: Notifications & Communication
+
+- Email notifications (SendGrid or Resend)
+- WhatsApp notifications (Twilio or Africa's Talking)
+- In-app notification system
+- SMS alerts for payment confirmations
+
+### Phase 5: Dashboards & Analytics
+
+**Customer Dashboard:**
+- Order history with status tracking
+- Favorite talents
+- Saved videos
+- Payment history
+
+**Talent Dashboard:**
+- Pending requests
+- Earnings overview
+- Performance analytics
+- Profile management
+- Request acceptance/decline
+
+**Admin Panel:**
+- Talent verification workflow
+- Content moderation
+- Platform analytics
+- Revenue tracking
+- User management
+
+### Phase 6: Advanced Features
+
+- Gift card system
+- Referral program
+- Advanced search with Elasticsearch
+- Video review and rating system
+- Automated refund processing
+- Multi-language support
+- SEO optimization
+- Performance monitoring (Sentry, New Relic)
+
+### Phase 7: Mobile Apps
+
+- React Native mobile apps (iOS & Android)
+- Push notifications
+- Offline video viewing
+- Mobile payment integration
 
 ---
 

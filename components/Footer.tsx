@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { Instagram, Facebook, MessageCircle, Mail } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -98,19 +99,31 @@ export function Footer() {
         </div>
 
         <div className="border-t border-purple-900/30 pt-8 flex flex-col md:flex-row items-center justify-between text-sm text-gray-400">
-          <p>© 2026 ToraShaout. All rights reserved.</p>
+          <div className="text-center md:text-left">
+            <p>© 2026 ToraShaout. All rights reserved.</p>
+            <p className="mt-1">© 2026 StatoTech. All rights reserved.</p>
+          </div>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
-              Twitter
+            <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition" aria-label="X">
+              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
             </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
-              Instagram
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition" aria-label="Instagram">
+              <Instagram className="w-5 h-5" />
+              <span>Instagram</span>
             </a>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
-              Facebook
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition" aria-label="Facebook">
+              <Facebook className="w-5 h-5" />
+              <span>Facebook</span>
             </a>
-            <a href="https://wa.me" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
-              WhatsApp
+            <a href="https://wa.me/821048370343" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition" aria-label="WhatsApp">
+              <MessageCircle className="w-5 h-5" />
+              <span>WhatsApp</span>
+            </a>
+            <a href="mailto:bsiwonde@gmail.com" className="flex items-center gap-2 hover:text-white transition" aria-label="Email">
+              <Mail className="w-5 h-5" />
+              <span>Email</span>
             </a>
           </div>
         </div>
