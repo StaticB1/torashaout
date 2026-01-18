@@ -7,7 +7,9 @@
       "Bash(xargs kill -9)",
       "Bash(npx kill-port:*)",
       "Bash(curl:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git pull:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
