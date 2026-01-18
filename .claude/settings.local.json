@@ -7,7 +7,16 @@
       "Bash(xargs kill -9)",
       "Bash(npx kill-port:*)",
       "Bash(curl:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Complete Phase 1 frontend - 10 pages with full UI components\n\n- Add landing page with hero, categories, featured talent, and Join as Talent CTA\n- Add browse talent catalog with search, filters, and sorting\n- Add individual talent profile pages with dynamic routes\n- Add checkout page with booking form and payment selection\n- Add booking confirmation and tracking page\n- Add How It Works page with 4-step process and FAQ\n- Add comprehensive FAQ page with 35 questions across 6 categories\n- Add For Business page with use cases, pricing tiers, and testimonials\n- Add Join as Talent page with 5-section application form\n- Add About Us page with mission, story, values, timeline, and team\n- Update navigation with all page links and styled currency dropdown\n- Update footer with social media icons \\(X, Instagram, Facebook, WhatsApp, Email\\)\n- Fix smart quotes issue in join page causing build errors\n- Update README with complete project structure and roadmap\n- All pages responsive with mobile-first design\n- Dark theme with purple/pink gradient branding\n- TypeScript types for all entities\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(pkill:*)",
+      "Bash(ls:*)",
+      "Bash(git pull:*)",
+      "Bash(npm install:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)"
     ]
   }
 }

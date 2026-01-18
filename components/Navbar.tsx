@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { Currency } from '@/types';
 import { Button } from '@/components/ui/Button';
+import { NotificationCenter } from '@/components/NotificationCenter';
 
 interface NavbarProps {
   currency: Currency;
@@ -64,7 +65,10 @@ export function Navbar({ currency, onCurrencyChange }: NavbarProps) {
                 </svg>
               </div>
             </div>
-            
+
+            {/* Notification Center */}
+            <NotificationCenter />
+
             <Button size="sm" variant="primary">
               Sign In
             </Button>
