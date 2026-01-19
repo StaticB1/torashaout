@@ -69,12 +69,10 @@ node create-admin-simple.js <email> <password> <full-name>
 
 **Example:**
 ```bash
-node create-admin-simple.js admin@torashaout.com admin123 "Admin User"
+node create-admin-simple.js admin@example.com securepassword "Admin User"
 ```
 
-**Current Admin Account:**
-- Email: `bsiwonde@torashaout.com`
-- Password: `admin123`
+**Security:** Store admin credentials securely and never commit them to version control.
 
 📖 **[Complete Authentication Guide](./docs/AUTHENTICATION_GUIDE.md)**
 

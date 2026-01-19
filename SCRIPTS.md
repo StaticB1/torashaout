@@ -39,7 +39,7 @@ node create-admin-simple.js <email> <password> <full-name>
 
 **Example:**
 ```bash
-node create-admin-simple.js admin@torashaout.com admin123 "Admin User"
+node create-admin-simple.js admin@example.com your-secure-password "Admin User"
 ```
 
 **Interactive Method:**
@@ -51,11 +51,7 @@ Choose from:
 1. Create new admin account (guided prompts)
 2. Promote existing user to admin
 
-### Current Admin Account
-
-- **Email**: `bsiwonde@torashaout.com`
-- **Password**: `admin123`
-- **Role**: `admin`
+**Security Note:** Never commit admin credentials to version control. Store them securely.
 
 ---
 

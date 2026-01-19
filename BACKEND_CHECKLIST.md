@@ -129,7 +129,7 @@ node create-admin-simple.js <email> <password> <full-name>
 
 **Example:**
 ```bash
-node create-admin-simple.js admin@torashaout.com admin123 "Admin User"
+node create-admin-simple.js admin@example.com your-secure-password "Admin User"
 ```
 
 The script will:
@@ -137,10 +137,7 @@ The script will:
 - ✅ Create or update the user profile with `admin` role
 - ✅ Display the account details including User ID
 
-**Current Admin Account:**
-- Email: `bsiwonde@torashaout.com`
-- Password: `admin123`
-- Role: `admin`
+**Note:** Keep admin credentials secure and never commit them to version control.
 
 ### Alternative Method: Manual Creation
 
