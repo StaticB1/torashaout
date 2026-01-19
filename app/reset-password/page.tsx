@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+  const toast = useToast();
 
   useEffect(() => {
     // Check if we have a valid session
@@ -35,6 +37,7 @@ export default function ResetPasswordPage() {
     // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      toast.error('Passwords do not match');
       setLoading(false);
       return;
     }
@@ -42,6 +45,7 @@ export default function ResetPasswordPage() {
     // Validate password length
     if (password.length < 6) {
       setError('Password must be at least 6 characters long');
+      toast.error('Password must be at least 6 characters long');
       setLoading(false);
       return;
     }
@@ -53,24 +57,27 @@ export default function ResetPasswordPage() {
 
       if (updateError) {
         setError(updateError.message);
+        toast.error(updateError.message);
         setLoading(false);
         return;
       }
 
       setSuccess(true);
+      toast.success('Password updated successfully!');
       // Redirect to login after 2 seconds
       setTimeout(() => {
         router.push('/login');
       }, 2000);
     } catch (err) {
       setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar />
+      <AuthNavbar />
 
       <div className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">

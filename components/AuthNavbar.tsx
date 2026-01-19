@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Menu, X, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { Currency } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useToast } from '@/components/ui/Toast';
 
 interface AuthNavbarProps {
   currency?: Currency;
@@ -19,9 +21,11 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, profile, loading, signOut, isAuthenticated } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const handleSignOut = async () => {
     await signOut();
+    toast.success('You have been signed out');
     router.push('/');
   };
 
@@ -35,6 +39,43 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
       default:
         return '/customer-dashboard';
     }
+  };
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return '';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const renderAvatar = (size: 'sm' | 'md' = 'sm') => {
+    const sizeClasses = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-10 h-10 text-sm';
+
+    if (profile?.avatar_url) {
+      return (
+        <Image
+          src={profile.avatar_url}
+          alt={profile.full_name || 'User avatar'}
+          width={size === 'sm' ? 28 : 40}
+          height={size === 'sm' ? 28 : 40}
+          className={`${sizeClasses} rounded-full object-cover`}
+        />
+      );
+    }
+
+    const initials = getInitials(profile?.full_name);
+    if (initials) {
+      return (
+        <div className={`${sizeClasses} rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center font-medium`}>
+          {initials}
+        </div>
+      );
+    }
+
+    return <User size={size === 'sm' ? 18 : 24} />;
   };
 
   return (
@@ -104,9 +145,9 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 rounded-lg px-4 py-2 hover:border-purple-400 transition"
+                  className="flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 rounded-full pl-1 pr-3 py-1 hover:border-purple-400 transition"
                 >
-                  <User size={18} />
+                  {renderAvatar('sm')}
                   <span className="text-sm font-medium">
                     {profile?.full_name || user?.email?.split('@')[0]}
                   </span>
@@ -120,9 +161,12 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
                       onClick={() => setUserMenuOpen(false)}
                     ></div>
                     <div className="absolute right-0 mt-2 w-56 bg-gray-900 border border-purple-700/30 rounded-lg shadow-xl z-20">
-                      <div className="px-4 py-3 border-b border-gray-800">
-                        <p className="text-sm font-medium text-white">{profile?.full_name}</p>
-                        <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
+                        {renderAvatar('md')}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{profile?.full_name}</p>
+                          <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                        </div>
                       </div>
                       <div className="py-2">
                         <Link
@@ -149,18 +193,9 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-3">
-                <Link href="/login">
-                  <Button size="sm" variant="ghost">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button size="sm" variant="primary">
-                    Sign Up
-                  </Button>
-                </Link>
-              </div>
+              <Link href="/login">
+                <Button size="sm" variant="primary">Login / Sign Up</Button>
+              </Link>
             )}
           </div>
 
@@ -176,9 +211,12 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
         <div className="md:hidden bg-black/95 border-t border-purple-900/30">
           <div className="px-4 py-4 space-y-3">
             {isAuthenticated && profile && (
-              <div className="pb-3 mb-3 border-b border-gray-800">
-                <p className="text-sm font-medium text-white">{profile.full_name}</p>
-                <p className="text-xs text-gray-400">{user?.email}</p>
+              <div className="flex items-center gap-3 pb-3 mb-3 border-b border-gray-800">
+                {renderAvatar('md')}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{profile.full_name}</p>
+                  <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                </div>
               </div>
             )}
 
@@ -263,15 +301,10 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2 pt-2">
+              <div className="pt-2">
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full" variant="ghost">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
                   <Button className="w-full" variant="primary">
-                    Sign Up
+                    Login / Sign Up
                   </Button>
                 </Link>
               </div>

@@ -2,20 +2,25 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
+import { useToast } from '@/components/ui/Toast';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+  const toast = useToast();
+
+  const redirectTo = searchParams.get('redirect');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,11 +35,14 @@ export default function LoginPage() {
 
       if (signInError) {
         setError(signInError.message);
+        toast.error(signInError.message);
         setLoading(false);
         return;
       }
 
       if (data.user) {
+        toast.success('Welcome back!');
+
         // Check user role and redirect accordingly
         const { data: userData } = await supabase
           .from('users')
@@ -42,6 +50,13 @@ export default function LoginPage() {
           .eq('id', data.user.id)
           .single();
 
+        // If there's a redirect URL, use it
+        if (redirectTo) {
+          router.push(redirectTo);
+          return;
+        }
+
+        // Otherwise redirect based on role
         if (userData?.role === 'admin') {
           router.push('/admin');
         } else if (userData?.role === 'talent') {
@@ -52,13 +67,14 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar />
+      <AuthNavbar />
 
       <div className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">

@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { UserPlus, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
+import { useToast } from '@/components/ui/Toast';
 
 type UserRole = 'fan' | 'talent';
 
@@ -23,6 +24,7 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const supabase = createClient();
+  const toast = useToast();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +34,7 @@ export default function SignUpPage() {
     // Validate password
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long');
+      toast.error('Password must be at least 6 characters long');
       setLoading(false);
       return;
     }
@@ -50,12 +53,14 @@ export default function SignUpPage() {
 
       if (signUpError) {
         setError(signUpError.message);
+        toast.error(signUpError.message);
         setLoading(false);
         return;
       }
 
       if (data.user) {
         setSuccess(true);
+        toast.success('Account created successfully!');
         // Redirect after 2 seconds
         setTimeout(() => {
           if (formData.role === 'talent') {
@@ -67,6 +72,7 @@ export default function SignUpPage() {
       }
     } catch (err) {
       setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
       setLoading(false);
     }
   };
@@ -77,7 +83,7 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar />
+      <AuthNavbar />
 
       <div className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">

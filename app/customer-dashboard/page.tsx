@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   LayoutDashboard,
   Video,
@@ -23,131 +24,68 @@ import {
   User,
   Gift,
   Share2,
-  Eye
+  Eye,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Currency, BookingStatus } from '@/types';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
+import { AuthGuard } from '@/components/AuthGuard';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/Button';
-
-// Mock data for customer dashboard
-const mockCustomerProfile = {
-  id: '1',
-  name: 'Tendai Moyo',
-  email: 'tendai.moyo@example.com',
-  avatarUrl: '/images/customer-avatar.jpg',
-  totalBookings: 8,
-  completedBookings: 5,
-  pendingBookings: 3,
-  totalSpent: 425,
-  memberSince: '2025-06-15',
-  favoriteCount: 12,
-};
-
-const mockBookings = [
-  {
-    id: '1',
-    bookingCode: 'TS-2026-0127',
-    talentName: 'Winky D',
-    talentAvatar: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=400',
-    recipientName: 'Sarah',
-    occasion: 'Birthday',
-    status: 'in_progress' as BookingStatus,
-    amountUSD: 50,
-    orderedAt: '2026-01-16T10:30:00Z',
-    dueDate: '2026-01-18T10:30:00Z',
-    videoUrl: null,
-  },
-  {
-    id: '2',
-    bookingCode: 'TS-2026-0115',
-    talentName: 'Comic Pastor',
-    talentAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    recipientName: 'My Team',
-    occasion: 'Motivation',
-    status: 'completed' as BookingStatus,
-    amountUSD: 35,
-    orderedAt: '2026-01-10T14:20:00Z',
-    completedAt: '2026-01-12T09:15:00Z',
-    videoUrl: '/videos/sample.mp4',
-    rating: 5,
-    review: 'Absolutely amazing! The team loved it!',
-  },
-  {
-    id: '3',
-    bookingCode: 'TS-2026-0108',
-    talentName: 'Janet Manyowa',
-    talentAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-    recipientName: 'Mom',
-    occasion: "Mother's Day",
-    status: 'completed' as BookingStatus,
-    amountUSD: 40,
-    orderedAt: '2026-01-05T08:00:00Z',
-    completedAt: '2026-01-07T16:30:00Z',
-    videoUrl: '/videos/sample2.mp4',
-    rating: 5,
-    review: null,
-  },
-  {
-    id: '4',
-    bookingCode: 'TS-2026-0120',
-    talentName: 'Stunner',
-    talentAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-    recipientName: 'David',
-    occasion: 'Graduation',
-    status: 'payment_confirmed' as BookingStatus,
-    amountUSD: 45,
-    orderedAt: '2026-01-15T12:00:00Z',
-    dueDate: '2026-01-17T12:00:00Z',
-    videoUrl: null,
-  },
-];
-
-const mockFavoriteTalents = [
-  {
-    id: '1',
-    name: 'Winky D',
-    category: 'Musician',
-    avatar: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?w=400',
-    priceUSD: 50,
-    rating: 4.9,
-    responseTime: 48,
-  },
-  {
-    id: '2',
-    name: 'Comic Pastor',
-    category: 'Comedian',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    priceUSD: 35,
-    rating: 4.8,
-    responseTime: 24,
-  },
-  {
-    id: '3',
-    name: 'Janet Manyowa',
-    category: 'Gospel Artist',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-    priceUSD: 40,
-    rating: 5.0,
-    responseTime: 72,
-  },
-  {
-    id: '5',
-    name: 'Tendai Mtawarira',
-    category: 'Sports',
-    avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=400',
-    priceUSD: 60,
-    rating: 4.9,
-    responseTime: 48,
-  },
-];
+import { Skeleton } from '@/components/ui/Skeleton';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useCustomerDashboard, CustomerBooking, FavoriteTalent } from '@/lib/hooks/useCustomerDashboard';
+import { getUnreadCount } from '@/lib/api/notifications.client';
+import { useToast } from '@/components/ui/Toast';
 
 type TabType = 'overview' | 'bookings' | 'favorites' | 'settings';
 
-export default function CustomerDashboardPage() {
+function CustomerDashboardContent() {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [filterStatus, setFilterStatus] = useState<'all' | BookingStatus>('all');
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const { user, profile } = useAuth();
+  const {
+    bookings,
+    favorites,
+    stats,
+    loading,
+    error,
+    refresh,
+    removeFavorite,
+    submitReview
+  } = useCustomerDashboard();
+  const toast = useToast();
+
+  // Load notification count
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const count = await getUnreadCount();
+        setUnreadNotifications(count);
+      } catch (err) {
+        console.error('Error loading notifications:', err);
+      }
+    };
+    if (user) {
+      loadNotifications();
+    }
+  }, [user]);
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Customer';
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -157,8 +95,12 @@ export default function CustomerDashboardPage() {
     });
   };
 
-  const getStatusBadge = (status: BookingStatus) => {
-    const badges = {
+  const formatCurrency = (amount: number) => {
+    return currency === 'USD' ? `$${amount.toLocaleString()}` : `ZIG ${amount.toLocaleString()}`;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, { bg: string; text: string; label: string }> = {
       pending_payment: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Pending Payment' },
       payment_confirmed: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Payment Confirmed' },
       in_progress: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'In Progress' },
@@ -169,38 +111,106 @@ export default function CustomerDashboardPage() {
     return badges[status] || badges.pending_payment;
   };
 
+  const handleRemoveFavorite = async (talentId: string) => {
+    try {
+      await removeFavorite(talentId);
+      toast.success('Removed from favorites');
+    } catch (err) {
+      toast.error('Failed to remove from favorites');
+    }
+  };
+
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
-    { id: 'bookings' as TabType, label: 'My Bookings', icon: Video, badge: mockCustomerProfile.pendingBookings },
-    { id: 'favorites' as TabType, label: 'Favorites', icon: Heart, badge: mockCustomerProfile.favoriteCount },
+    { id: 'bookings' as TabType, label: 'My Bookings', icon: Video, badge: stats?.pendingBookings },
+    { id: 'favorites' as TabType, label: 'Favorites', icon: Heart, badge: stats?.favoriteCount },
     { id: 'settings' as TabType, label: 'Settings', icon: Settings },
   ];
 
   const filteredBookings = filterStatus === 'all'
-    ? mockBookings
-    : mockBookings.filter(b => b.status === filterStatus);
+    ? bookings
+    : bookings.filter(b => b.status === filterStatus);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+        <div className="container mx-auto px-4 py-8 pt-24">
+          <div className="flex items-center gap-4 mb-8">
+            <Skeleton className="w-16 h-16 rounded-full" />
+            <div>
+              <Skeleton className="w-48 h-8 mb-2" />
+              <Skeleton className="w-32 h-4" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-96 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+        <div className="container mx-auto px-4 py-8 pt-24">
+          <div className="bg-red-900/20 border border-red-700/50 rounded-xl p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Unable to load dashboard</h2>
+            <p className="text-neutral-400 mb-4">{error}</p>
+            <Button onClick={refresh}>Try Again</Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Get member since date from user creation
+  const memberSince = user?.created_at ? formatDate(user.created_at) : 'Recently';
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div className="flex items-center gap-4 mb-4 md:mb-0">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-2xl font-bold">
-              {mockCustomerProfile.name.split(' ').map(n => n[0]).join('')}
-            </div>
+            {profile?.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt={displayName}
+                width={64}
+                height={64}
+                className="w-16 h-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-2xl font-bold">
+                {getInitials(profile?.full_name)}
+              </div>
+            )}
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{mockCustomerProfile.name}</h1>
-              <p className="text-neutral-400">Member since {formatDate(mockCustomerProfile.memberSince)}</p>
+              <h1 className="text-2xl md:text-3xl font-bold">{displayName}</h1>
+              <p className="text-neutral-400">Member since {memberSince}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative p-2 bg-neutral-900 rounded-lg hover:bg-neutral-800 transition">
+            <Link href="/notifications" className="relative p-2 bg-neutral-900 rounded-lg hover:bg-neutral-800 transition">
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full text-xs flex items-center justify-center">2</span>
-            </button>
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full text-xs flex items-center justify-center">
+                  {unreadNotifications}
+                </span>
+              )}
+            </Link>
             <Link href="/browse">
               <Button size="sm">
                 <Search className="w-4 h-4 mr-2" />
@@ -226,13 +236,13 @@ export default function CustomerDashboardPage() {
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
-                {tab.badge ? (
+                {tab.badge !== undefined && tab.badge > 0 && (
                   <span className={`ml-1 px-2 py-0.5 text-xs rounded-full ${
                     activeTab === tab.id ? 'bg-white/20' : 'bg-pink-500'
                   }`}>
                     {tab.badge}
                   </span>
-                ) : null}
+                )}
               </button>
             );
           })}
@@ -247,7 +257,7 @@ export default function CustomerDashboardPage() {
                 <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
                   <Video className="w-5 h-5 text-purple-400" />
                 </div>
-                <p className="text-2xl font-bold">{mockCustomerProfile.totalBookings}</p>
+                <p className="text-2xl font-bold">{stats?.totalBookings || 0}</p>
                 <p className="text-sm text-neutral-400">Total Bookings</p>
               </div>
 
@@ -255,7 +265,7 @@ export default function CustomerDashboardPage() {
                 <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
                   <CheckCircle className="w-5 h-5 text-green-400" />
                 </div>
-                <p className="text-2xl font-bold">{mockCustomerProfile.completedBookings}</p>
+                <p className="text-2xl font-bold">{stats?.completedBookings || 0}</p>
                 <p className="text-sm text-neutral-400">Completed</p>
               </div>
 
@@ -263,7 +273,7 @@ export default function CustomerDashboardPage() {
                 <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center mb-4">
                   <Clock className="w-5 h-5 text-yellow-400" />
                 </div>
-                <p className="text-2xl font-bold">{mockCustomerProfile.pendingBookings}</p>
+                <p className="text-2xl font-bold">{stats?.pendingBookings || 0}</p>
                 <p className="text-sm text-neutral-400">Pending</p>
               </div>
 
@@ -271,7 +281,7 @@ export default function CustomerDashboardPage() {
                 <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center mb-4">
                   <DollarSign className="w-5 h-5 text-pink-400" />
                 </div>
-                <p className="text-2xl font-bold">${mockCustomerProfile.totalSpent}</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats?.totalSpent || 0)}</p>
                 <p className="text-sm text-neutral-400">Total Spent</p>
               </div>
             </div>
@@ -289,30 +299,47 @@ export default function CustomerDashboardPage() {
                     View all <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="space-y-4">
-                  {mockBookings.slice(0, 3).map((booking) => {
-                    const badge = getStatusBadge(booking.status);
-                    return (
-                      <div key={booking.id} className="bg-black/50 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <img
-                            src={booking.talentAvatar}
-                            alt={booking.talentName}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                          <div className="flex-1">
-                            <p className="font-semibold">{booking.talentName}</p>
-                            <p className="text-sm text-neutral-400">For: {booking.recipientName}</p>
-                            <p className="text-xs text-neutral-500 mt-1">{booking.bookingCode}</p>
+                {bookings.length === 0 ? (
+                  <div className="text-center py-8 text-neutral-400">
+                    <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No bookings yet</p>
+                    <p className="text-sm">Book your first video from a celebrity!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookings.slice(0, 3).map((booking) => {
+                      const badge = getStatusBadge(booking.status);
+                      const talentImage = booking.talent?.thumbnail_url || booking.talent?.users?.avatar_url;
+                      return (
+                        <div key={booking.id} className="bg-black/50 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            {talentImage ? (
+                              <Image
+                                src={talentImage}
+                                alt={booking.talent?.display_name || 'Talent'}
+                                width={48}
+                                height={48}
+                                className="w-12 h-12 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                                <User className="w-6 h-6" />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <p className="font-semibold">{booking.talent?.display_name || 'Unknown Talent'}</p>
+                              <p className="text-sm text-neutral-400">For: {booking.recipient_name}</p>
+                              <p className="text-xs text-neutral-500 mt-1">{booking.booking_code}</p>
+                            </div>
+                            <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>
+                              {badge.label}
+                            </span>
                           </div>
-                          <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>
-                            {badge.label}
-                          </span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Favorite Talents */}
@@ -326,32 +353,51 @@ export default function CustomerDashboardPage() {
                     View all <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="space-y-4">
-                  {mockFavoriteTalents.slice(0, 3).map((talent) => (
-                    <Link
-                      key={talent.id}
-                      href={`/talent/${talent.id}`}
-                      className="bg-black/50 rounded-lg p-4 flex items-center gap-3 hover:bg-black/70 transition"
-                    >
-                      <img
-                        src={talent.avatar}
-                        alt={talent.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <p className="font-semibold">{talent.name}</p>
-                        <p className="text-sm text-neutral-400">{talent.category}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">${talent.priceUSD}</p>
-                        <div className="flex items-center gap-1 text-xs text-neutral-400">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          {talent.rating}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
+                {favorites.length === 0 ? (
+                  <div className="text-center py-8 text-neutral-400">
+                    <Heart className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No favorites yet</p>
+                    <p className="text-sm">Browse and save your favorite talents</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {favorites.slice(0, 3).map((fav) => {
+                      const talentImage = fav.talent?.thumbnail_url || fav.talent?.users?.avatar_url;
+                      return (
+                        <Link
+                          key={fav.talent.id}
+                          href={`/talent/${fav.talent.id}`}
+                          className="bg-black/50 rounded-lg p-4 flex items-center gap-3 hover:bg-black/70 transition"
+                        >
+                          {talentImage ? (
+                            <Image
+                              src={talentImage}
+                              alt={fav.talent.display_name}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                              <User className="w-6 h-6" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <p className="font-semibold">{fav.talent.display_name}</p>
+                            <p className="text-sm text-neutral-400 capitalize">{fav.talent.category}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">{formatCurrency(fav.talent.price_usd)}</p>
+                            <div className="flex items-center gap-1 text-xs text-neutral-400">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              {fav.talent.average_rating?.toFixed(1) || '0.0'}
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -394,7 +440,7 @@ export default function CustomerDashboardPage() {
                     : 'bg-neutral-900 text-neutral-400 hover:text-white'
                 }`}
               >
-                All ({mockBookings.length})
+                All ({bookings.length})
               </button>
               <button
                 onClick={() => setFilterStatus('completed')}
@@ -429,115 +475,163 @@ export default function CustomerDashboardPage() {
             </div>
 
             {/* Bookings List */}
-            <div className="space-y-4">
-              {filteredBookings.map((booking) => {
-                const badge = getStatusBadge(booking.status);
-                return (
-                  <div key={booking.id} className="bg-neutral-900 rounded-xl p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                      <div className="flex items-start gap-4 flex-1">
-                        <img
-                          src={booking.talentAvatar}
-                          alt={booking.talentName}
-                          className="w-16 h-16 rounded-full object-cover"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-bold">{booking.talentName}</h3>
-                            <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>
-                              {badge.label}
-                            </span>
-                          </div>
-                          <p className="text-sm text-neutral-400 mb-1">
-                            For: {booking.recipientName} • {booking.occasion}
-                          </p>
-                          <p className="text-xs text-neutral-500 mb-3">{booking.bookingCode}</p>
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-400">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              Ordered: {formatDate(booking.orderedAt)}
-                            </span>
-                            {booking.completedAt && (
-                              <span className="flex items-center gap-1 text-green-400">
-                                <CheckCircle className="w-4 h-4" />
-                                Completed: {formatDate(booking.completedAt)}
+            {filteredBookings.length === 0 ? (
+              <div className="bg-neutral-900 rounded-xl p-8 text-center">
+                <Video className="w-16 h-16 mx-auto mb-4 text-neutral-600" />
+                <h3 className="text-xl font-bold mb-2">No bookings found</h3>
+                <p className="text-neutral-400 mb-4">
+                  {filterStatus === 'all'
+                    ? "You haven't made any bookings yet."
+                    : `No ${filterStatus.replace('_', ' ')} bookings found.`}
+                </p>
+                <Link href="/browse">
+                  <Button>Browse Talents</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredBookings.map((booking) => {
+                  const badge = getStatusBadge(booking.status);
+                  const talentImage = booking.talent?.thumbnail_url || booking.talent?.users?.avatar_url;
+                  return (
+                    <div key={booking.id} className="bg-neutral-900 rounded-xl p-6">
+                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                        <div className="flex items-start gap-4 flex-1">
+                          {talentImage ? (
+                            <Image
+                              src={talentImage}
+                              alt={booking.talent?.display_name || 'Talent'}
+                              width={64}
+                              height={64}
+                              className="w-16 h-16 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                              <User className="w-8 h-8" />
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-bold">{booking.talent?.display_name || 'Unknown Talent'}</h3>
+                              <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>
+                                {badge.label}
                               </span>
-                            )}
+                            </div>
+                            <p className="text-sm text-neutral-400 mb-1">
+                              For: {booking.recipient_name} • {booking.occasion || 'General'}
+                            </p>
+                            <p className="text-xs text-neutral-500 mb-3">{booking.booking_code}</p>
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-400">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                Ordered: {formatDate(booking.created_at)}
+                              </span>
+                              {booking.completed_at && (
+                                <span className="flex items-center gap-1 text-green-400">
+                                  <CheckCircle className="w-4 h-4" />
+                                  Completed: {formatDate(booking.completed_at)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-3">
-                        <p className="text-xl font-bold">${booking.amountUSD}</p>
-                        {booking.status === 'completed' && booking.videoUrl && (
-                          <div className="flex gap-2">
+                        <div className="flex flex-col items-end gap-3">
+                          <p className="text-xl font-bold">{formatCurrency(booking.amount_paid)}</p>
+                          {booking.status === 'completed' && booking.video_url && (
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline">
+                                <Download className="w-4 h-4 mr-1" />
+                                Download
+                              </Button>
+                              <Button size="sm">
+                                <Play className="w-4 h-4 mr-1" />
+                                Watch
+                              </Button>
+                            </div>
+                          )}
+                          {booking.status === 'completed' && !booking.customer_rating && (
                             <Button size="sm" variant="outline">
-                              <Download className="w-4 h-4 mr-1" />
-                              Download
+                              <Star className="w-4 h-4 mr-1" />
+                              Leave Review
                             </Button>
-                            <Button size="sm">
-                              <Play className="w-4 h-4 mr-1" />
-                              Watch
-                            </Button>
-                          </div>
-                        )}
-                        {booking.status === 'completed' && !booking.rating && (
-                          <Button size="sm" variant="outline">
-                            <Star className="w-4 h-4 mr-1" />
-                            Leave Review
-                          </Button>
-                        )}
-                        {booking.rating && (
-                          <div className="flex items-center gap-1">
-                            {[...Array(booking.rating)].map((_, i) => (
-                              <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            ))}
-                          </div>
-                        )}
+                          )}
+                          {booking.customer_rating && (
+                            <div className="flex items-center gap-1">
+                              {[...Array(booking.customer_rating)].map((_, i) => (
+                                <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
         {/* Favorites Tab */}
         {activeTab === 'favorites' && (
           <div className="space-y-6">
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockFavoriteTalents.map((talent) => (
-                <div key={talent.id} className="bg-neutral-900 rounded-xl overflow-hidden group">
-                  <div className="relative">
-                    <img
-                      src={talent.avatar}
-                      alt={talent.name}
-                      className="w-full h-48 object-cover"
-                    />
-                    <button className="absolute top-3 right-3 w-10 h-10 bg-black/70 hover:bg-pink-600 rounded-full flex items-center justify-center transition">
-                      <Heart className="w-5 h-5 fill-pink-500 text-pink-500" />
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg mb-1">{talent.name}</h3>
-                    <p className="text-sm text-neutral-400 mb-3">{talent.category}</p>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{talent.rating}</span>
+            {favorites.length === 0 ? (
+              <div className="bg-neutral-900 rounded-xl p-8 text-center">
+                <Heart className="w-16 h-16 mx-auto mb-4 text-neutral-600" />
+                <h3 className="text-xl font-bold mb-2">No favorites yet</h3>
+                <p className="text-neutral-400 mb-4">Browse and save your favorite talents to book them later.</p>
+                <Link href="/browse">
+                  <Button>Browse Talents</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {favorites.map((fav) => {
+                  const talentImage = fav.talent?.thumbnail_url || fav.talent?.users?.avatar_url;
+                  return (
+                    <div key={fav.talent.id} className="bg-neutral-900 rounded-xl overflow-hidden group">
+                      <div className="relative h-48">
+                        {talentImage ? (
+                          <Image
+                            src={talentImage}
+                            alt={fav.talent.display_name}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+                            <User className="w-16 h-16" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleRemoveFavorite(fav.talent.id)}
+                          className="absolute top-3 right-3 w-10 h-10 bg-black/70 hover:bg-pink-600 rounded-full flex items-center justify-center transition"
+                        >
+                          <Heart className="w-5 h-5 fill-pink-500 text-pink-500" />
+                        </button>
                       </div>
-                      <span className="text-sm text-neutral-400">{talent.responseTime}h response</span>
+                      <div className="p-4">
+                        <h3 className="font-bold text-lg mb-1">{fav.talent.display_name}</h3>
+                        <p className="text-sm text-neutral-400 mb-3 capitalize">{fav.talent.category}</p>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                            <span className="text-sm font-medium">{fav.talent.average_rating?.toFixed(1) || '0.0'}</span>
+                          </div>
+                          <span className="text-sm text-neutral-400">{fav.talent.response_time_hours}h response</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xl font-bold">{formatCurrency(fav.talent.price_usd)}</span>
+                          <Link href={`/talent/${fav.talent.id}`}>
+                            <Button size="sm">Book Now</Button>
+                          </Link>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold">${talent.priceUSD}</span>
-                      <Link href={`/talent/${talent.id}`}>
-                        <Button size="sm">Book Now</Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -548,31 +642,23 @@ export default function CustomerDashboardPage() {
             <div className="bg-neutral-900 rounded-xl p-6">
               <h2 className="text-xl font-bold mb-6">Profile Settings</h2>
               <div className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">First Name</label>
-                    <input
-                      type="text"
-                      defaultValue="Tendai"
-                      className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Last Name</label>
-                    <input
-                      type="text"
-                      defaultValue="Moyo"
-                      className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    defaultValue={profile?.full_name || ''}
+                    className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Email</label>
                   <input
                     type="email"
-                    defaultValue={mockCustomerProfile.email}
-                    className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    defaultValue={user?.email || ''}
+                    disabled
+                    className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 text-neutral-500"
                   />
+                  <p className="text-xs text-neutral-500 mt-1">Email cannot be changed</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Phone Number</label>
@@ -591,7 +677,11 @@ export default function CustomerDashboardPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Preferred Currency</label>
-                  <select className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as Currency)}
+                    className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
                     <option value="USD">USD ($)</option>
                     <option value="ZIG">ZIG (ZIG)</option>
                   </select>
@@ -599,35 +689,10 @@ export default function CustomerDashboardPage() {
               </div>
             </div>
 
-            {/* Notification Settings */}
-            <div className="bg-neutral-900 rounded-xl p-6">
-              <h2 className="text-xl font-bold mb-6">Notifications</h2>
-              <div className="space-y-4">
-                {[
-                  { label: 'Order updates', description: 'Get notified when your video is ready', enabled: true },
-                  { label: 'Promotions', description: 'Receive special offers and discounts', enabled: true },
-                  { label: 'New talents', description: 'Be the first to know about new celebrities', enabled: false },
-                  { label: 'Reminders', description: 'Get reminded about special occasions', enabled: true },
-                ].map((setting, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-3 border-b border-neutral-800 last:border-0">
-                    <div>
-                      <p className="font-medium">{setting.label}</p>
-                      <p className="text-sm text-neutral-400">{setting.description}</p>
-                    </div>
-                    <button
-                      className={`relative w-12 h-6 rounded-full transition-colors ${setting.enabled ? 'bg-purple-500' : 'bg-neutral-700'}`}
-                    >
-                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${setting.enabled ? 'left-7' : 'left-1'}`} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Save Button */}
             <div className="flex justify-end gap-4">
               <Button variant="outline">Cancel</Button>
-              <Button>Save Changes</Button>
+              <Button onClick={() => toast.success('Settings saved!')}>Save Changes</Button>
             </div>
           </div>
         )}
@@ -635,5 +700,13 @@ export default function CustomerDashboardPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function CustomerDashboardPage() {
+  return (
+    <AuthGuard requiredRole="fan">
+      <CustomerDashboardContent />
+    </AuthGuard>
   );
 }

@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { KeyRound, Mail, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
+import { useToast } from '@/components/ui/Toast';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ export default function ForgotPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+  const toast = useToast();
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,21 +29,24 @@ export default function ForgotPasswordPage() {
 
       if (resetError) {
         setError(resetError.message);
+        toast.error(resetError.message);
         setLoading(false);
         return;
       }
 
       setSuccess(true);
+      toast.success('Password reset email sent!');
       setLoading(false);
     } catch (err) {
       setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar />
+      <AuthNavbar />
 
       <div className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md mx-auto">

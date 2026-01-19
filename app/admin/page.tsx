@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   LayoutDashboard,
   Users,
@@ -32,9 +33,11 @@ import {
   Calendar
 } from 'lucide-react';
 import { Currency } from '@/types';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
+import { AuthGuard } from '@/components/AuthGuard';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/Button';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 // Mock data for admin dashboard
 const mockPlatformStats = {
@@ -143,9 +146,12 @@ const mockRevenueData = [
 
 type TabType = 'overview' | 'talents' | 'bookings' | 'moderation' | 'analytics';
 
-export default function AdminPanelPage() {
+function AdminPanelContent() {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const { user, profile } = useAuth();
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Admin';
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -165,14 +171,14 @@ export default function AdminPanelPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold mb-2">Admin Dashboard</h1>
-            <p className="text-neutral-400">Platform management and analytics</p>
+            <p className="text-neutral-400">Welcome back, {displayName}</p>
           </div>
           <div className="flex items-center gap-3 mt-4 md:mt-0">
             <button className="relative p-2 bg-neutral-900 rounded-lg hover:bg-neutral-800 transition">
@@ -667,5 +673,13 @@ export default function AdminPanelPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function AdminPanelPage() {
+  return (
+    <AuthGuard requiredRole="admin">
+      <AdminPanelContent />
+    </AuthGuard>
   );
 }
