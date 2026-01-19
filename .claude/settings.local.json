@@ -16,7 +16,13 @@
       "Bash(npm install:*)",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(sh:*)",
+      "Bash(node seed-data.js:*)",
+      "Bash(node test-connection.js:*)",
+      "Bash(node create-admin.js:*)",
+      "Bash(node create-admin-simple.js:*)"
     ]
   }
 }

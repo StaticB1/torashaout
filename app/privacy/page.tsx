@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Shield, FileText, Eye, Lock, Globe, Bell, UserCheck, Clock, Mail, Phone, MapPin } from 'lucide-react';
 import { Currency } from '@/types';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 
 export default function PrivacyPolicyPage() {
@@ -41,7 +41,7 @@ export default function PrivacyPolicyPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}

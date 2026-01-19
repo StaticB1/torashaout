@@ -5,7 +5,7 @@ import { Search, Filter, X } from 'lucide-react'
 import { mockTalentProfiles } from '@/lib/mock-data'
 import { Currency, TalentCategory } from '@/types'
 import { TalentCard } from '@/components/TalentCard'
-import { Navbar } from '@/components/Navbar'
+import { AuthNavbar } from '@/components/AuthNavbar'
 import { Footer } from '@/components/Footer'
 
 const categories: { value: TalentCategory | 'all'; label: string }[] = [
@@ -76,7 +76,7 @@ export default function BrowsePage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}

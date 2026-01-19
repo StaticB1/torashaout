@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Search, Play, Zap, ChevronRight, Shield, Clock, TrendingUp, Star } from 'lucide-react';
 import { Currency } from '@/types';
 import { mockTalentProfiles, categories } from '@/lib/mock-data';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 import { TalentCard } from '@/components/TalentCard';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +16,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">

@@ -117,9 +117,33 @@ All tables should have `rowsecurity = true`
 
 ---
 
-## Phase 10: Create Test User
+## Phase 10: Create Admin User
 
-- [ ] Build authentication pages (login/signup) OR
+### ✅ Recommended Method: Use Admin Creation Script
+
+Run the admin creation script to create an admin account:
+
+```bash
+node create-admin-simple.js <email> <password> <full-name>
+```
+
+**Example:**
+```bash
+node create-admin-simple.js admin@torashaout.com admin123 "Admin User"
+```
+
+The script will:
+- ✅ Create the auth user with auto-confirmed email
+- ✅ Create or update the user profile with `admin` role
+- ✅ Display the account details including User ID
+
+**Current Admin Account:**
+- Email: `bsiwonde@torashaout.com`
+- Password: `admin123`
+- Role: `admin`
+
+### Alternative Method: Manual Creation
+
 - [ ] Use Supabase dashboard to create test user:
   - Go to Authentication > Users
   - Click "Add user"

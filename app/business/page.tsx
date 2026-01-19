@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Briefcase, Users, TrendingUp, Award, Gift, Megaphone, CheckCircle, ArrowRight, Sparkles, Target, BarChart3, Heart } from 'lucide-react'
 import { Currency } from '@/types'
-import { Navbar } from '@/components/Navbar'
+import { AuthNavbar } from '@/components/AuthNavbar'
 import { Footer } from '@/components/Footer'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -199,7 +199,7 @@ export default function BusinessPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}

@@ -38,12 +38,45 @@ cd torashaout-nextjs
 # 2. Install dependencies
 npm install
 
-# 3. Run development server
+# 3. Set up environment variables (copy from .env.example)
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
+
+# 4. Run development server
 npm run dev
 
-# 4. Open browser
+# 5. Open browser
 # Navigate to http://localhost:3000
 ```
+
+---
+
+## 🔐 Authentication & Admin Setup
+
+### Backend Setup
+
+ToraShaout uses **Supabase** for authentication and database. Follow the complete setup guide:
+
+📖 **[Backend Setup Guide](./BACKEND_CHECKLIST.md)**
+
+### Creating Admin Accounts
+
+After setting up Supabase, create an admin account using the provided script:
+
+```bash
+node create-admin-simple.js <email> <password> <full-name>
+```
+
+**Example:**
+```bash
+node create-admin-simple.js admin@torashaout.com admin123 "Admin User"
+```
+
+**Current Admin Account:**
+- Email: `bsiwonde@torashaout.com`
+- Password: `admin123`
+
+📖 **[Complete Authentication Guide](./docs/AUTHENTICATION_GUIDE.md)**
 
 ---
 
