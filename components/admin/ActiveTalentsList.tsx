@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { getActiveTalents, toggleTalentAcceptingBookings } from '@/lib/api/admin.client'
+import { ActiveTalentDetailsModal } from './ActiveTalentDetailsModal'
 
 interface ActiveTalent {
   id: string
@@ -43,6 +44,7 @@ export function ActiveTalentsList() {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
+  const [selectedTalent, setSelectedTalent] = useState<ActiveTalent | null>(null)
 
   useEffect(() => {
     loadTalents()
@@ -235,7 +237,11 @@ export function ActiveTalentsList() {
                       />
                     </button>
                   </div>
-                  <Button size="sm" variant="outline">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedTalent(talent)}
+                  >
                     <Eye className="w-4 h-4 mr-1" />
                     Details
                   </Button>
@@ -244,6 +250,27 @@ export function ActiveTalentsList() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Active Talent Details Modal */}
+      {selectedTalent && (
+        <ActiveTalentDetailsModal
+          isOpen={!!selectedTalent}
+          onClose={() => setSelectedTalent(null)}
+          talent={selectedTalent}
+          onToggleBookings={async (isAccepting) => {
+            try {
+              await toggleTalentAcceptingBookings(selectedTalent.id, isAccepting)
+              // Update local state
+              setTalents(prev => prev.map(t =>
+                t.id === selectedTalent.id ? { ...t, isAcceptingBookings: isAccepting } : t
+              ))
+              setSelectedTalent({ ...selectedTalent, isAcceptingBookings: isAccepting })
+            } catch (err) {
+              console.error('Error toggling bookings:', err)
+            }
+          }}
+        />
       )}
     </div>
   )
