@@ -44,6 +44,7 @@ import { useAdminDashboard } from '@/lib/hooks/useAdminDashboard';
 import { ActiveTalentsList } from '@/components/admin/ActiveTalentsList';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useToast } from '@/components/ui/Toast';
+import { TalentReviewModal } from '@/components/admin/TalentReviewModal';
 
 // Mock flagged content (this will be implemented later)
 const mockFlaggedContent = [
@@ -90,6 +91,17 @@ function AdminPanelContent() {
     title: '',
     message: '',
     onConfirm: () => {}
+  });
+
+  // Review modal state
+  const [reviewModal, setReviewModal] = useState<{
+    isOpen: boolean
+    talent: any
+    status: 'pending' | 'rejected'
+  }>({
+    isOpen: false,
+    talent: null,
+    status: 'pending'
   });
 
   // Get real data from backend
@@ -549,7 +561,11 @@ function AdminPanelContent() {
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Approve
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setReviewModal({ isOpen: true, talent, status: 'pending' })}
+                      >
                         <Eye className="w-4 h-4 mr-1" />
                         Review Details
                       </Button>
@@ -681,7 +697,11 @@ function AdminPanelContent() {
                                 <CheckCircle className="w-4 h-4 mr-1" />
                                 Re-Approve
                               </Button>
-                              <Button size="sm" variant="outline">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setReviewModal({ isOpen: true, talent, status: 'rejected' })}
+                              >
                                 <Eye className="w-4 h-4 mr-1" />
                                 Review Details
                               </Button>
@@ -882,6 +902,19 @@ function AdminPanelContent() {
         confirmText="Confirm"
         cancelText="Cancel"
       />
+
+      {/* Talent Review Modal */}
+      {reviewModal.talent && (
+        <TalentReviewModal
+          isOpen={reviewModal.isOpen}
+          onClose={() => setReviewModal({ ...reviewModal, isOpen: false })}
+          talent={reviewModal.talent}
+          status={reviewModal.status}
+          onApprove={() => handleApproveTalent(reviewModal.talent.id)}
+          onReject={() => handleRejectTalent(reviewModal.talent.id)}
+          onReapprove={() => handleReapproveTalent(reviewModal.talent.id)}
+        />
+      )}
 
       <Footer />
     </div>
