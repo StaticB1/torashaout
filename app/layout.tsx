@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   description: 'Book personalized video messages from Zimbabwe\'s biggest celebrities. For birthdays, graduations, or just because.',
   keywords: ['celebrity', 'video', 'messages', 'zimbabwe', 'cameo', 'personalized'],
   authors: [{ name: 'ToraShaout' }],
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  },
   openGraph: {
     title: 'ToraShaout - Celebrity Video Messages',
     description: 'Book personalized video messages from Zimbabwe\'s biggest celebrities',

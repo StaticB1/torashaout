@@ -19,17 +19,17 @@ export default function HomePage() {
       <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             {/* Left Content */}
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               <div className="inline-flex items-center space-x-2 bg-purple-900/30 border border-purple-700/50 rounded-full px-4 py-2">
                 <Zap size={16} className="text-pink-400" />
                 <span className="text-sm text-gray-300">Connecting Zimbabwe to the World</span>
               </div>
               
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
                 Your Favorite
                 <span className="block text-gradient-brand">
                   Stars, Delivered
@@ -37,8 +37,8 @@ export default function HomePage() {
                 Anywhere
               </h1>
 
-              <p className="text-xl text-gray-400 max-w-lg">
-                Book personalized video messages from Zimbabwe&apos;s biggest celebrities. 
+              <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-lg">
+                Book personalized video messages from Zimbabwe&apos;s biggest celebrities.
                 For birthdays, graduations, or just because.
               </p>
 
@@ -58,18 +58,18 @@ export default function HomePage() {
               </div>
 
               {/* Stats */}
-              <div className="flex gap-8 pt-4">
+              <div className="flex flex-wrap gap-6 sm:gap-8 pt-4">
                 <div>
-                  <div className="text-3xl font-bold text-purple-400">500+</div>
-                  <div className="text-sm text-gray-500">Verified Stars</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-400">500+</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Verified Stars</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-pink-400">10K+</div>
-                  <div className="text-sm text-gray-500">Videos Delivered</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-pink-400">10K+</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Videos Delivered</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-purple-400">4.9★</div>
-                  <div className="text-sm text-gray-500">Average Rating</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-400">4.9★</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Average Rating</div>
                 </div>
               </div>
             </div>

@@ -8,9 +8,27 @@
     --foreground: 0 0% 100%;
   }
 
+  html {
+    /* Prevent font size inflation on mobile */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Improve scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+  }
 
   body {
     @apply bg-black text-white antialiased;
+    /* Prevent horizontal overflow */
+    overflow-x: hidden;
+    /* Better font rendering on mobile */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Ensure images don't overflow */
+  img {
+    max-width: 100%;
+    height: auto;
   }
 }
 
