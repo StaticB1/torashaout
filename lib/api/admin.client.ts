@@ -52,17 +52,18 @@ export async function getPlatformStats() {
       .select('amount_paid, platform_fee, created_at')
       .eq('status', 'completed')
 
-    const totalRevenue = completedOrders?.reduce((sum, b) => sum + Number(b.amount_paid || 0), 0) || 0
-    const platformFee = completedOrders?.reduce((sum, b) => sum + Number(b.platform_fee || 0), 0) || 0
+    const orders = (completedOrders as any[]) || []
+    const totalRevenue = orders.reduce((sum, b) => sum + Number(b.amount_paid || 0), 0)
+    const platformFee = orders.reduce((sum, b) => sum + Number(b.platform_fee || 0), 0)
     const totalPayouts = totalRevenue - platformFee
 
     // Calculate monthly revenue (last 30 days)
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const monthlyOrders = completedOrders?.filter(order =>
+    const monthlyOrders = orders.filter(order =>
       new Date(order.created_at) >= thirtyDaysAgo
-    ) || []
+    )
 
     const monthlyRevenue = monthlyOrders.reduce((sum, b) => sum + Number(b.amount_paid || 0), 0)
 
@@ -70,10 +71,10 @@ export async function getPlatformStats() {
     const sixtyDaysAgo = new Date()
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
 
-    const previousMonthOrders = completedOrders?.filter(order => {
+    const previousMonthOrders = orders.filter(order => {
       const orderDate = new Date(order.created_at)
       return orderDate >= sixtyDaysAgo && orderDate < thirtyDaysAgo
-    }) || []
+    })
 
     const previousMonthRevenue = previousMonthOrders.reduce((sum, b) => sum + Number(b.amount_paid || 0), 0)
     const revenueGrowth = previousMonthRevenue > 0
@@ -140,7 +141,11 @@ export async function getRecentBookings(limit: number = 10) {
     throw error
   }
 
-  return data?.map(booking => ({
+  if (!data) {
+    return []
+  }
+
+  return (data as any[]).map(booking => ({
     id: booking.id,
     bookingCode: booking.booking_code,
     customerName: (booking.customer as any)?.full_name || 'Unknown',
@@ -150,7 +155,7 @@ export async function getRecentBookings(limit: number = 10) {
     status: booking.status,
     occasion: booking.occasion,
     createdAt: booking.created_at,
-  })) || []
+  }))
 }
 
 /**
@@ -193,7 +198,11 @@ export async function getPendingTalents() {
     throw error
   }
 
-  return data?.map(talent => ({
+  if (!data) {
+    return []
+  }
+
+  return (data as any[]).map(talent => ({
     id: talent.id,
     name: talent.display_name,
     category: talent.category,
@@ -202,7 +211,7 @@ export async function getPendingTalents() {
     appliedAt: talent.created_at,
     requestedPrice: talent.price_usd,
     bio: talent.bio,
-  })) || []
+  }))
 }
 
 /**
@@ -243,7 +252,11 @@ export async function getRejectedTalents() {
       return []
     }
 
-    return data?.map(talent => ({
+    if (!data) {
+      return []
+    }
+
+    return (data as any[]).map(talent => ({
       id: talent.id,
       name: talent.display_name,
       category: talent.category,
@@ -253,7 +266,7 @@ export async function getRejectedTalents() {
       rejectedAt: talent.updated_at,
       requestedPrice: talent.price_usd,
       bio: talent.bio,
-    })) || []
+    }))
   } catch (err) {
     console.warn('Error fetching rejected talents, likely column does not exist yet:', err)
     return []
@@ -281,6 +294,7 @@ export async function approveTalent(talentId: string) {
 
   const { error } = await supabase
     .from('talent_profiles')
+    // @ts-ignore - Supabase type inference issue with dynamic updateData
     .update(updateData)
     .eq('id', talentId)
 
@@ -313,6 +327,7 @@ export async function rejectTalent(talentId: string) {
 
   const { error } = await supabase
     .from('talent_profiles')
+    // @ts-ignore - Supabase type inference issue with dynamic updateData
     .update(updateData)
     .eq('id', talentId)
 
@@ -348,7 +363,8 @@ export async function getRevenueAnalytics(months: number = 6) {
   // Group by month
   const monthlyData: Record<string, { revenue: number; bookings: number }> = {}
 
-  data?.forEach(booking => {
+  const bookings = (data as any[]) || []
+  bookings.forEach(booking => {
     const month = new Date(booking.created_at).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short'
@@ -426,63 +442,72 @@ export async function getActiveTalents(filters?: {
 }) {
   const supabase = createClient()
 
-  let query = supabase
-    .from('talent_profiles')
-    .select(`
-      id,
-      display_name,
-      bio,
-      category,
-      price_usd,
-      price_zig,
-      response_time_hours,
-      thumbnail_url,
-      admin_verified,
-      is_accepting_bookings,
-      total_bookings,
-      average_rating,
-      created_at,
-      user:user_id (
+  try {
+    let query = supabase
+      .from('talent_profiles')
+      .select(`
         id,
-        email,
-        phone,
-        full_name
-      )
-    `)
-    .eq('admin_verified', true)
-    .order('total_bookings', { ascending: false })
+        display_name,
+        bio,
+        category,
+        price_usd,
+        price_zig,
+        response_time_hours,
+        thumbnail_url,
+        admin_verified,
+        is_accepting_bookings,
+        total_bookings,
+        average_rating,
+        created_at,
+        user:user_id (
+          id,
+          email,
+          phone,
+          full_name
+        )
+      `)
+      .eq('admin_verified', true)
+      .order('total_bookings', { ascending: false })
 
-  if (filters?.category) {
-    query = query.eq('category', filters.category)
+    if (filters?.category) {
+      query = query.eq('category', filters.category)
+    }
+
+    if (filters?.search) {
+      query = query.or(`display_name.ilike.%${filters.search}%,bio.ilike.%${filters.search}%`)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Error fetching active talents:', error)
+      throw error
+    }
+
+    if (!data) {
+      return []
+    }
+
+    return (data as any[]).map(talent => ({
+      id: talent.id,
+      name: talent.display_name,
+      category: talent.category,
+      email: (talent.user as any)?.email || '',
+      phone: (talent.user as any)?.phone || '',
+      bio: talent.bio,
+      priceUsd: talent.price_usd,
+      priceZig: talent.price_zig,
+      responseTime: talent.response_time_hours || 24,
+      thumbnailUrl: talent.thumbnail_url,
+      isAcceptingBookings: talent.is_accepting_bookings || false,
+      totalBookings: talent.total_bookings || 0,
+      averageRating: talent.average_rating || 0,
+      joinedAt: talent.created_at,
+    }))
+  } catch (err) {
+    console.error('Error in getActiveTalents:', err)
+    throw err
   }
-
-  if (filters?.search) {
-    query = query.or(`display_name.ilike.%${filters.search}%,bio.ilike.%${filters.search}%`)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    console.error('Error fetching active talents:', error)
-    throw error
-  }
-
-  return data?.map(talent => ({
-    id: talent.id,
-    name: talent.display_name,
-    category: talent.category,
-    email: (talent.user as any)?.email || '',
-    phone: (talent.user as any)?.phone || '',
-    bio: talent.bio,
-    priceUsd: talent.price_usd,
-    priceZig: talent.price_zig,
-    responseTime: talent.response_time_hours,
-    thumbnailUrl: talent.thumbnail_url,
-    isAcceptingBookings: talent.is_accepting_bookings,
-    totalBookings: talent.total_bookings,
-    averageRating: talent.average_rating,
-    joinedAt: talent.created_at,
-  })) || []
 }
 
 /**
@@ -511,24 +536,26 @@ export async function getTalentDetails(talentId: string) {
     throw error
   }
 
+  const talent = data as any
+
   return {
-    id: data.id,
-    name: data.display_name,
-    category: data.category,
-    email: (data.user as any)?.email || '',
-    phone: (data.user as any)?.phone || '',
-    fullName: (data.user as any)?.full_name || '',
-    bio: data.bio,
-    priceUsd: data.price_usd,
-    priceZig: data.price_zig,
-    responseTime: data.response_time_hours,
-    thumbnailUrl: data.thumbnail_url,
-    isAcceptingBookings: data.is_accepting_bookings,
-    adminVerified: data.admin_verified,
-    totalBookings: data.total_bookings,
-    averageRating: data.average_rating,
-    joinedAt: data.created_at,
-    userCreatedAt: (data.user as any)?.created_at,
+    id: talent.id,
+    name: talent.display_name,
+    category: talent.category,
+    email: (talent.user as any)?.email || '',
+    phone: (talent.user as any)?.phone || '',
+    fullName: (talent.user as any)?.full_name || '',
+    bio: talent.bio,
+    priceUsd: talent.price_usd,
+    priceZig: talent.price_zig,
+    responseTime: talent.response_time_hours,
+    thumbnailUrl: talent.thumbnail_url,
+    isAcceptingBookings: talent.is_accepting_bookings,
+    adminVerified: talent.admin_verified,
+    totalBookings: talent.total_bookings,
+    averageRating: talent.average_rating,
+    joinedAt: talent.created_at,
+    userCreatedAt: (talent.user as any)?.created_at,
   }
 }
 
@@ -540,6 +567,7 @@ export async function toggleTalentAcceptingBookings(talentId: string, isAcceptin
 
   const { error } = await supabase
     .from('talent_profiles')
+    // @ts-ignore - Supabase type inference issue
     .update({ is_accepting_bookings: isAccepting })
     .eq('id', talentId)
 
@@ -559,6 +587,7 @@ export async function updateTalentVerification(talentId: string, verified: boole
 
   const { error } = await supabase
     .from('talent_profiles')
+    // @ts-ignore - Supabase type inference issue
     .update({
       admin_verified: verified,
       is_accepting_bookings: verified ? true : false,
@@ -582,6 +611,7 @@ export async function reapproveTalent(talentId: string) {
 
   const { error } = await supabase
     .from('talent_profiles')
+    // @ts-ignore - Supabase type inference issue
     .update({
       admin_verified: true,
       is_accepting_bookings: true,
