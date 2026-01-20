@@ -523,6 +523,7 @@ Complete documentation is available for all aspects of the project:
 - **[ENHANCEMENTS.md](./ENHANCEMENTS.md)** - Feature documentation and updates
 - **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
 - **[RECENT_CHANGES.md](./RECENT_CHANGES.md)** - Latest updates and migration guides
+- **[PAGINATION_IMPLEMENTATION.md](./PAGINATION_IMPLEMENTATION.md)** - Pagination system implementation guide
 - **[DOCUMENTATION_WORKFLOW.md](./DOCUMENTATION_WORKFLOW.md)** - Documentation update workflow
 
 ### Contributing

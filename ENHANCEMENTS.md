@@ -456,7 +456,45 @@ This update introduces significant architectural improvements, custom React hook
 
 ---
 
-## 🔄 Recent Updates (January 20, 2026 - Talent Management)
+## 🔄 Recent Updates (January 20, 2026 - Talent Management Pagination & UI)
+
+### Latest Commits
+
+#### Commit: `feat: Add pagination to all talent management lists`
+
+This update adds comprehensive pagination to all talent lists (pending, approved, rejected) with a reusable Pagination component, improving performance and user experience for large datasets.
+
+**Key Features:**
+- Server-side pagination with page size of 10 items
+- Reusable Pagination component with Previous/Next navigation
+- Smart page number display with ellipsis
+- Automatic reset to page 1 when filters change
+- "Showing X to Y of Z results" indicator
+
+#### Commit: `feat: Add iOS-style toggle switches and custom modals`
+
+Enhanced the admin UI with modern toggle switches and custom confirmation modals.
+
+**Key Features:**
+- iOS-style toggle switches for booking acceptance (green/gray)
+- Custom ConfirmModal component replacing browser prompts
+- TalentReviewModal for viewing pending/rejected talent details
+- ActiveTalentDetailsModal showing performance stats
+- Toast notifications for success/error feedback
+- Dynamic category loading from database
+
+#### Commit: `feat: Add talent seeding scripts for pagination testing`
+
+Created database seeding scripts to generate test data for comprehensive pagination testing.
+
+**Features:**
+- `seed-talents.mjs` - Generate test talents across all statuses
+- `count-talents.mjs` - Check current talent counts
+- `add-more-rejected.mjs` - Add additional rejected talents
+- Realistic Zimbabwean names and varied categories
+- Generated 77+ test talents for thorough testing
+
+---
 
 ### Commit: `feat: Complete admin talent management with three-status system`
 

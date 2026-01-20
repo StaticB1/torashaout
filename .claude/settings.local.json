@@ -32,7 +32,10 @@
       "Bash(node scripts/verify-data.mjs:*)",
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(node scripts/seed-talents.mjs:*)",
+      "Bash(node scripts/count-talents.mjs:*)",
+      "Bash(node scripts/add-more-rejected.mjs:*)"
     ]
   }
 }
