@@ -18,7 +18,7 @@ import {
   Filter
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { getActiveTalents, toggleTalentAcceptingBookings } from '@/lib/api/admin.client'
+import { getActiveTalents, toggleTalentAcceptingBookings, getTalentCategories } from '@/lib/api/admin.client'
 import { ActiveTalentDetailsModal } from './ActiveTalentDetailsModal'
 
 interface ActiveTalent {
@@ -45,10 +45,24 @@ export function ActiveTalentsList() {
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [selectedTalent, setSelectedTalent] = useState<ActiveTalent | null>(null)
+  const [categories, setCategories] = useState<string[]>([])
 
   useEffect(() => {
     loadTalents()
   }, [categoryFilter])
+
+  useEffect(() => {
+    loadCategories()
+  }, [])
+
+  const loadCategories = async () => {
+    try {
+      const data = await getTalentCategories()
+      setCategories(data)
+    } catch (err) {
+      console.error('Error loading categories:', err)
+    }
+  }
 
   const loadTalents = async () => {
     try {
@@ -112,7 +126,13 @@ export function ActiveTalentsList() {
     )
   }
 
-  const categories = ['musician', 'comedian', 'gospel-artist', 'actor', 'sports', 'influencer']
+  // Helper to format category for display
+  const formatCategory = (category: string) => {
+    return category
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }
 
   return (
     <div className="space-y-6">
@@ -173,7 +193,7 @@ export function ActiveTalentsList() {
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-bold truncate">{talent.name}</h3>
                       <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
-                        {talent.category}
+                        {formatCategory(talent.category)}
                       </span>
                       {talent.isAcceptingBookings ? (
                         <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1">

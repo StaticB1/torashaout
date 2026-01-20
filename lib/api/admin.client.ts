@@ -434,6 +434,36 @@ export async function getAllBookings(filters?: {
 }
 
 /**
+ * Get all unique talent categories from the database
+ */
+export async function getTalentCategories() {
+  const supabase = createClient()
+
+  try {
+    const { data, error } = await supabase
+      .from('talent_profiles')
+      .select('category')
+      .not('category', 'is', null)
+
+    if (error) {
+      console.error('Error fetching categories:', error)
+      throw error
+    }
+
+    if (!data) {
+      return []
+    }
+
+    // Get unique categories
+    const categories = [...new Set((data as any[]).map(t => t.category))]
+    return categories.sort()
+  } catch (err) {
+    console.error('Error in getTalentCategories:', err)
+    return []
+  }
+}
+
+/**
  * Get all active (verified) talents
  */
 export async function getActiveTalents(filters?: {
