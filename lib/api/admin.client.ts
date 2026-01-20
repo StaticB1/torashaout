@@ -159,10 +159,24 @@ export async function getRecentBookings(limit: number = 10) {
 }
 
 /**
- * Get pending talent applications
+ * Get pending talent applications with pagination
  */
-export async function getPendingTalents() {
+export async function getPendingTalents(options?: {
+  page?: number
+  pageSize?: number
+}) {
   const supabase = createClient()
+  const page = options?.page || 1
+  const pageSize = options?.pageSize || 10
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  // Get total count
+  const { count } = await supabase
+    .from('talent_profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('admin_verified', false)
+    .or('verification_status.eq.pending,verification_status.is.null')
 
   // Get talents that are not verified AND not rejected
   // Query for admin_verified = false AND verification_status = 'pending' (or NULL for backwards compatibility)
@@ -190,6 +204,7 @@ export async function getPendingTalents() {
     .eq('admin_verified', false)
     .or('verification_status.eq.pending,verification_status.is.null')
     .order('created_at', { ascending: true })
+    .range(from, to)
 
   const { data, error } = await query
 
@@ -199,10 +214,16 @@ export async function getPendingTalents() {
   }
 
   if (!data) {
-    return []
+    return {
+      data: [],
+      total: 0,
+      page,
+      pageSize,
+      totalPages: 0,
+    }
   }
 
-  return (data as any[]).map(talent => ({
+  const talents = (data as any[]).map(talent => ({
     id: talent.id,
     name: talent.display_name,
     category: talent.category,
@@ -212,16 +233,37 @@ export async function getPendingTalents() {
     requestedPrice: talent.price_usd,
     bio: talent.bio,
   }))
+
+  return {
+    data: talents,
+    total: count || 0,
+    page,
+    pageSize,
+    totalPages: Math.ceil((count || 0) / pageSize),
+  }
 }
 
 /**
- * Get rejected talent applications
+ * Get rejected talent applications with pagination
  * Note: This requires the verification_status column migration to be run
  */
-export async function getRejectedTalents() {
+export async function getRejectedTalents(options?: {
+  page?: number
+  pageSize?: number
+}) {
   const supabase = createClient()
+  const page = options?.page || 1
+  const pageSize = options?.pageSize || 10
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   try {
+    // Get total count
+    const { count } = await supabase
+      .from('talent_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('verification_status', 'rejected')
+
     const { data, error } = await supabase
       .from('talent_profiles')
       .select(`
@@ -245,18 +287,31 @@ export async function getRejectedTalents() {
       `)
       .eq('verification_status', 'rejected')
       .order('updated_at', { ascending: false })
+      .range(from, to)
 
     // If error (column doesn't exist), return empty array
     if (error) {
       console.warn('verification_status column not found, returning empty rejected list:', error.message)
-      return []
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      }
     }
 
     if (!data) {
-      return []
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      }
     }
 
-    return (data as any[]).map(talent => ({
+    const talents = (data as any[]).map(talent => ({
       id: talent.id,
       name: talent.display_name,
       category: talent.category,
@@ -267,9 +322,23 @@ export async function getRejectedTalents() {
       requestedPrice: talent.price_usd,
       bio: talent.bio,
     }))
+
+    return {
+      data: talents,
+      total: count || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count || 0) / pageSize),
+    }
   } catch (err) {
     console.warn('Error fetching rejected talents, likely column does not exist yet:', err)
-    return []
+    return {
+      data: [],
+      total: 0,
+      page,
+      pageSize,
+      totalPages: 0,
+    }
   }
 }
 
@@ -464,15 +533,38 @@ export async function getTalentCategories() {
 }
 
 /**
- * Get all active (verified) talents
+ * Get all active (verified) talents with pagination
  */
 export async function getActiveTalents(filters?: {
   category?: string
   search?: string
+  page?: number
+  pageSize?: number
 }) {
   const supabase = createClient()
+  const page = filters?.page || 1
+  const pageSize = filters?.pageSize || 10
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   try {
+    // Build count query with same filters
+    let countQuery = supabase
+      .from('talent_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('admin_verified', true)
+
+    if (filters?.category) {
+      countQuery = countQuery.eq('category', filters.category)
+    }
+
+    if (filters?.search) {
+      countQuery = countQuery.or(`display_name.ilike.%${filters.search}%,bio.ilike.%${filters.search}%`)
+    }
+
+    const { count } = await countQuery
+
+    // Build data query
     let query = supabase
       .from('talent_profiles')
       .select(`
@@ -498,6 +590,7 @@ export async function getActiveTalents(filters?: {
       `)
       .eq('admin_verified', true)
       .order('total_bookings', { ascending: false })
+      .range(from, to)
 
     if (filters?.category) {
       query = query.eq('category', filters.category)
@@ -515,10 +608,16 @@ export async function getActiveTalents(filters?: {
     }
 
     if (!data) {
-      return []
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+      }
     }
 
-    return (data as any[]).map(talent => ({
+    const talents = (data as any[]).map(talent => ({
       id: talent.id,
       name: talent.display_name,
       category: talent.category,
@@ -534,6 +633,14 @@ export async function getActiveTalents(filters?: {
       averageRating: talent.average_rating || 0,
       joinedAt: talent.created_at,
     }))
+
+    return {
+      data: talents,
+      total: count || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count || 0) / pageSize),
+    }
   } catch (err) {
     console.error('Error in getActiveTalents:', err)
     throw err

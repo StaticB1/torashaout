@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { getActiveTalents, toggleTalentAcceptingBookings, getTalentCategories } from '@/lib/api/admin.client'
 import { ActiveTalentDetailsModal } from './ActiveTalentDetailsModal'
+import { Pagination } from '@/components/ui/Pagination'
 
 interface ActiveTalent {
   id: string
@@ -46,10 +47,14 @@ export function ActiveTalentsList() {
   const [categoryFilter, setCategoryFilter] = useState<string>('')
   const [selectedTalent, setSelectedTalent] = useState<ActiveTalent | null>(null)
   const [categories, setCategories] = useState<string[]>([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [total, setTotal] = useState(0)
+  const pageSize = 10
 
   useEffect(() => {
     loadTalents()
-  }, [categoryFilter])
+  }, [categoryFilter, page])
 
   useEffect(() => {
     loadCategories()
@@ -68,11 +73,15 @@ export function ActiveTalentsList() {
     try {
       setLoading(true)
       setError(null)
-      const data = await getActiveTalents({
+      const result = await getActiveTalents({
         category: categoryFilter || undefined,
-        search: searchQuery || undefined
+        search: searchQuery || undefined,
+        page,
+        pageSize
       })
-      setTalents(data)
+      setTalents(result.data)
+      setTotal(result.total)
+      setTotalPages(result.totalPages)
     } catch (err) {
       console.error('Error loading active talents:', err)
       setError(err instanceof Error ? err.message : 'Failed to load talents')
@@ -94,7 +103,13 @@ export function ActiveTalentsList() {
   }
 
   const handleSearch = () => {
+    setPage(1) // Reset to page 1 when searching
     loadTalents()
+  }
+
+  const handleCategoryChange = (newCategory: string) => {
+    setCategoryFilter(newCategory)
+    setPage(1) // Reset to page 1 when changing category
   }
 
   const formatDate = (dateString: string) => {
@@ -151,7 +166,7 @@ export function ActiveTalentsList() {
         </div>
         <select
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onChange={(e) => handleCategoryChange(e.target.value)}
           className="bg-neutral-900 border border-neutral-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
           <option value="">All Categories</option>
@@ -167,7 +182,7 @@ export function ActiveTalentsList() {
       {/* Talents Count */}
       <div className="flex items-center justify-between">
         <p className="text-neutral-400">
-          Showing <span className="text-white font-semibold">{talents.length}</span> active talents
+          Showing <span className="text-white font-semibold">{talents.length}</span> of <span className="text-white font-semibold">{total}</span> active talents
         </p>
       </div>
 
@@ -270,6 +285,17 @@ export function ActiveTalentsList() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Pagination */}
+      {total > pageSize && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={total}
+          pageSize={pageSize}
+        />
       )}
 
       {/* Active Talent Details Modal */}

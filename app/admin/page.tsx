@@ -45,6 +45,7 @@ import { ActiveTalentsList } from '@/components/admin/ActiveTalentsList';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useToast } from '@/components/ui/Toast';
 import { TalentReviewModal } from '@/components/admin/TalentReviewModal';
+import { Pagination } from '@/components/ui/Pagination';
 
 // Mock flagged content (this will be implemented later)
 const mockFlaggedContent = [
@@ -116,7 +117,17 @@ function AdminPanelContent() {
     approveTalent,
     rejectTalent,
     reapproveTalent,
-    refresh
+    refresh,
+    // Pagination
+    pendingPage,
+    setPendingPage,
+    rejectedPage,
+    setRejectedPage,
+    pendingTotal,
+    rejectedTotal,
+    pendingTotalPages,
+    rejectedTotalPages,
+    pageSize,
   } = useAdminDashboard();
 
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Admin';
@@ -496,11 +507,11 @@ function AdminPanelContent() {
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-bold">Pending Verifications</h2>
                   <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    pendingTalents.length > 0
+                    pendingTotal > 0
                       ? 'bg-yellow-500/20 text-yellow-400'
                       : 'bg-neutral-700 text-neutral-400'
                   }`}>
-                    {pendingTalents.length}
+                    {pendingTotal}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -579,6 +590,19 @@ function AdminPanelContent() {
               ))}
                     </div>
                   )}
+
+                  {/* Pagination for Pending Talents */}
+                  {pendingTotal > pageSize && (
+                    <div className="mt-6">
+                      <Pagination
+                        currentPage={pendingPage}
+                        totalPages={pendingTotalPages}
+                        onPageChange={setPendingPage}
+                        totalItems={pendingTotal}
+                        pageSize={pageSize}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -626,11 +650,11 @@ function AdminPanelContent() {
                 <div className="flex items-center gap-3">
                   <h2 className="text-xl font-bold">Rejected Applications</h2>
                   <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    rejectedTalents.length > 0
+                    rejectedTotal > 0
                       ? 'bg-red-500/20 text-red-400'
                       : 'bg-neutral-700 text-neutral-400'
                   }`}>
-                    {rejectedTalents.length}
+                    {rejectedTotal}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -709,6 +733,19 @@ function AdminPanelContent() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Pagination for Rejected Talents */}
+                  {rejectedTotal > pageSize && (
+                    <div className="mt-6">
+                      <Pagination
+                        currentPage={rejectedPage}
+                        totalPages={rejectedTotalPages}
+                        onPageChange={setRejectedPage}
+                        totalItems={rejectedTotal}
+                        pageSize={pageSize}
+                      />
                     </div>
                   )}
                 </div>

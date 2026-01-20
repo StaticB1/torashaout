@@ -505,6 +505,38 @@ For questions or issues, contact:
 
 ---
 
+## 📚 Documentation
+
+Complete documentation is available for all aspects of the project:
+
+### Getting Started
+- **[QUICKSTART.md](./QUICKSTART.md)** - Quick setup guide
+- **[CODESPACES.md](./CODESPACES.md)** - GitHub Codespaces setup
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Deployment instructions
+
+### Backend & API
+- **[docs/BACKEND_README.md](./docs/BACKEND_README.md)** - Complete backend guide with API examples
+- **[docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md)** - Database setup and schema
+- **[docs/AUTHENTICATION_GUIDE.md](./docs/AUTHENTICATION_GUIDE.md)** - Authentication flow documentation
+
+### Development
+- **[ENHANCEMENTS.md](./ENHANCEMENTS.md)** - Feature documentation and updates
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
+- **[RECENT_CHANGES.md](./RECENT_CHANGES.md)** - Latest updates and migration guides
+- **[DOCUMENTATION_WORKFLOW.md](./DOCUMENTATION_WORKFLOW.md)** - Documentation update workflow
+
+### Contributing
+Before pushing changes, always update relevant documentation. See [DOCUMENTATION_WORKFLOW.md](./DOCUMENTATION_WORKFLOW.md) for the complete workflow.
+
+**Pre-Push Checklist:**
+- [ ] Update [CHANGELOG.md](./CHANGELOG.md) with your changes
+- [ ] Update [ENHANCEMENTS.md](./ENHANCEMENTS.md) if adding features
+- [ ] Update backend docs if changing API/database
+
+A pre-push git hook will remind you to update documentation.
+
+---
+
 ## 📄 License
 
 © 2026 ToraShaout. All rights reserved.

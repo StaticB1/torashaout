@@ -82,10 +82,50 @@ export function useAdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Pagination state
+  const [pendingPage, setPendingPage] = useState(1)
+  const [rejectedPage, setRejectedPage] = useState(1)
+  const [pendingTotal, setPendingTotal] = useState(0)
+  const [rejectedTotal, setRejectedTotal] = useState(0)
+  const [pendingTotalPages, setPendingTotalPages] = useState(0)
+  const [rejectedTotalPages, setRejectedTotalPages] = useState(0)
+  const pageSize = 10
+
   // Load initial data
   useEffect(() => {
     loadDashboardData()
   }, [])
+
+  // Reload when pagination changes
+  useEffect(() => {
+    loadPendingTalents()
+  }, [pendingPage])
+
+  useEffect(() => {
+    loadRejectedTalents()
+  }, [rejectedPage])
+
+  const loadPendingTalents = async () => {
+    try {
+      const result = await getPendingTalents({ page: pendingPage, pageSize })
+      setPendingTalents(result.data)
+      setPendingTotal(result.total)
+      setPendingTotalPages(result.totalPages)
+    } catch (err) {
+      console.error('Error loading pending talents:', err)
+    }
+  }
+
+  const loadRejectedTalents = async () => {
+    try {
+      const result = await getRejectedTalents({ page: rejectedPage, pageSize })
+      setRejectedTalents(result.data)
+      setRejectedTotal(result.total)
+      setRejectedTotalPages(result.totalPages)
+    } catch (err) {
+      console.error('Error loading rejected talents:', err)
+    }
+  }
 
   const loadDashboardData = async () => {
     try {
@@ -96,15 +136,19 @@ export function useAdminDashboard() {
       const [statsData, bookingsData, talentsData, rejectedData, revenueAnalytics] = await Promise.all([
         getPlatformStats(),
         getRecentBookings(10),
-        getPendingTalents(),
-        getRejectedTalents(),
+        getPendingTalents({ page: pendingPage, pageSize }),
+        getRejectedTalents({ page: rejectedPage, pageSize }),
         getRevenueAnalytics(6)
       ])
 
       setStats(statsData)
       setRecentBookings(bookingsData)
-      setPendingTalents(talentsData)
-      setRejectedTalents(rejectedData)
+      setPendingTalents(talentsData.data)
+      setPendingTotal(talentsData.total)
+      setPendingTotalPages(talentsData.totalPages)
+      setRejectedTalents(rejectedData.data)
+      setRejectedTotal(rejectedData.total)
+      setRejectedTotalPages(rejectedData.totalPages)
       setRevenueData(revenueAnalytics)
 
     } catch (err) {
@@ -125,13 +169,17 @@ export function useAdminDashboard() {
 
       // Refresh all talent lists to ensure consistent state
       const [newPendingData, newRejectedData, newStats] = await Promise.all([
-        getPendingTalents(),
-        getRejectedTalents(),
+        getPendingTalents({ page: pendingPage, pageSize }),
+        getRejectedTalents({ page: rejectedPage, pageSize }),
         getPlatformStats()
       ])
 
-      setPendingTalents(newPendingData)
-      setRejectedTalents(newRejectedData)
+      setPendingTalents(newPendingData.data)
+      setPendingTotal(newPendingData.total)
+      setPendingTotalPages(newPendingData.totalPages)
+      setRejectedTalents(newRejectedData.data)
+      setRejectedTotal(newRejectedData.total)
+      setRejectedTotalPages(newRejectedData.totalPages)
       setStats(newStats)
 
       return { success: true }
@@ -151,13 +199,17 @@ export function useAdminDashboard() {
 
       // Refresh all talent lists to ensure consistent state
       const [newPendingData, newRejectedData, newStats] = await Promise.all([
-        getPendingTalents(),
-        getRejectedTalents(),
+        getPendingTalents({ page: pendingPage, pageSize }),
+        getRejectedTalents({ page: rejectedPage, pageSize }),
         getPlatformStats()
       ])
 
-      setPendingTalents(newPendingData)
-      setRejectedTalents(newRejectedData)
+      setPendingTalents(newPendingData.data)
+      setPendingTotal(newPendingData.total)
+      setPendingTotalPages(newPendingData.totalPages)
+      setRejectedTalents(newRejectedData.data)
+      setRejectedTotal(newRejectedData.total)
+      setRejectedTotalPages(newRejectedData.totalPages)
       setStats(newStats)
 
       return { success: true }
@@ -177,13 +229,17 @@ export function useAdminDashboard() {
 
       // Refresh all talent lists to ensure consistent state
       const [newPendingData, newRejectedData, newStats] = await Promise.all([
-        getPendingTalents(),
-        getRejectedTalents(),
+        getPendingTalents({ page: pendingPage, pageSize }),
+        getRejectedTalents({ page: rejectedPage, pageSize }),
         getPlatformStats()
       ])
 
-      setPendingTalents(newPendingData)
-      setRejectedTalents(newRejectedData)
+      setPendingTalents(newPendingData.data)
+      setPendingTotal(newPendingData.total)
+      setPendingTotalPages(newPendingData.totalPages)
+      setRejectedTalents(newRejectedData.data)
+      setRejectedTotal(newRejectedData.total)
+      setRejectedTotalPages(newRejectedData.totalPages)
       setStats(newStats)
 
       return { success: true }
@@ -209,6 +265,16 @@ export function useAdminDashboard() {
     approveTalent: handleApproveTalent,
     rejectTalent: handleRejectTalent,
     reapproveTalent: handleReapproveTalent,
-    refresh
+    refresh,
+    // Pagination
+    pendingPage,
+    setPendingPage,
+    rejectedPage,
+    setRejectedPage,
+    pendingTotal,
+    rejectedTotal,
+    pendingTotalPages,
+    rejectedTotalPages,
+    pageSize,
   }
 }

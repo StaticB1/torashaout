@@ -191,16 +191,20 @@ await addFavorite(userId, talentId)
 await toggleFavorite(userId, talentId)
 ```
 
-### Notifications API (`notifications.ts`)
+### Notifications API
+
+**UPDATED:** The notifications API has been split into client and server modules for better security and performance.
+
+#### Client-side (`notifications.client.ts`)
 
 ```typescript
 import {
   getNotifications,
   getUnreadCount,
   subscribeToNotifications
-} from '@/lib/api/notifications'
+} from '@/lib/api/notifications.client'
 
-// Get notifications
+// Get notifications (client component)
 const notifications = await getNotifications()
 
 // Get unread count
@@ -210,6 +214,30 @@ const unreadCount = await getUnreadCount()
 const unsubscribe = subscribeToNotifications(userId, (notification) => {
   console.log('New notification:', notification)
 })
+```
+
+#### Server-side (`notifications.server.ts`)
+
+```typescript
+import {
+  getNotifications,
+  createNotification,
+  sendBulkNotifications
+} from '@/lib/api/notifications.server'
+
+// Get notifications (server component/API route)
+const notifications = await getNotifications(userId)
+
+// Create notification
+await createNotification({
+  userId,
+  type: 'booking_confirmed',
+  title: 'Booking confirmed!',
+  message: 'Your video request has been accepted'
+})
+
+// Send bulk notifications
+await sendBulkNotifications([...])
 ```
 
 ### Admin API (`admin.ts`)
@@ -230,6 +258,86 @@ const pending = await getPendingTalents()
 // Get all bookings
 const bookings = await getAllBookings({ status: 'completed' })
 ```
+
+---
+
+## Custom React Hooks
+
+**NEW:** Custom hooks for simplified state management in dashboards.
+
+### Customer Dashboard Hook (`useCustomerDashboard.ts`)
+
+```typescript
+'use client'
+import { useCustomerDashboard } from '@/lib/hooks/useCustomerDashboard'
+
+export function CustomerDashboard() {
+  const {
+    bookings,
+    favorites,
+    stats,
+    loading,
+    error,
+    refreshBookings,
+    toggleFavorite
+  } = useCustomerDashboard()
+
+  if (loading) return <Skeleton />
+  if (error) return <Error message={error} />
+
+  return (
+    <div>
+      <Stats data={stats} />
+      <Bookings data={bookings} />
+      <Favorites data={favorites} onToggle={toggleFavorite} />
+    </div>
+  )
+}
+```
+
+**Features:**
+- Automatic data fetching on mount
+- Real-time synchronization with Supabase
+- Optimistic UI updates
+- Error handling and loading states
+- Refresh and mutation functions
+
+### Talent Profile Hook (`useTalentProfile.ts`)
+
+```typescript
+'use client'
+import { useTalentProfile } from '@/lib/hooks/useTalentProfile'
+
+export function TalentDashboard() {
+  const {
+    profile,
+    bookings,
+    earnings,
+    stats,
+    loading,
+    updateProfile,
+    acceptBooking,
+    rejectBooking
+  } = useTalentProfile()
+
+  if (loading) return <Skeleton />
+
+  return (
+    <div>
+      <ProfileCard profile={profile} onUpdate={updateProfile} />
+      <BookingRequests data={bookings} onAccept={acceptBooking} />
+      <EarningsChart data={earnings} stats={stats} />
+    </div>
+  )
+}
+```
+
+**Features:**
+- Manages talent profile state
+- Handles booking requests
+- Tracks earnings and analytics
+- Real-time notification integration
+- Profile update functions
 
 ---
 
@@ -485,15 +593,77 @@ console.log('Current user:', user)
 
 ---
 
+## UI Components
+
+**NEW:** Reusable UI components for better UX.
+
+### AuthGuard Component
+
+Protects routes that require authentication:
+
+```typescript
+import { AuthGuard } from '@/components/AuthGuard'
+
+export default function ProtectedPage() {
+  return (
+    <AuthGuard>
+      <YourProtectedContent />
+    </AuthGuard>
+  )
+}
+```
+
+### Skeleton Component
+
+Shows loading states:
+
+```typescript
+import { Skeleton } from '@/components/ui/Skeleton'
+
+export function LoadingCard() {
+  return (
+    <div>
+      <Skeleton variant="text" width={200} />
+      <Skeleton variant="circular" size={40} />
+      <Skeleton variant="rectangular" height={100} />
+    </div>
+  )
+}
+```
+
+### Toast Component
+
+Shows user feedback notifications:
+
+```typescript
+import { toast } from '@/components/ui/Toast'
+
+// Success toast
+toast.success('Booking confirmed!')
+
+// Error toast
+toast.error('Payment failed')
+
+// Info toast
+toast.info('Check your email for confirmation')
+
+// Warning toast
+toast.warning('Session expires in 5 minutes')
+```
+
+---
+
 ## Next Steps
 
 1. ✅ **Backend Setup Complete** - Database and API ready
-2. 📝 **Create Authentication Pages** - Login, Signup, Password Reset
-3. 🔗 **Connect Dashboards** - Replace mock data with real queries
-4. 💳 **Payment Integration** - Connect Paynow, Stripe webhooks
-5. 📹 **Video Storage** - Set up Cloudflare Stream integration
-6. 📧 **Notifications** - Email and SMS integration
-7. 🚀 **Deploy** - Deploy to Vercel with Supabase
+2. ✅ **Authentication Pages Created** - Login, Signup, Password Reset
+3. ✅ **Custom Hooks Added** - useCustomerDashboard, useTalentProfile
+4. ✅ **UI Components Created** - AuthGuard, Skeleton, Toast
+5. 🔗 **Connect Dashboards** - Replace mock data with real queries
+6. 💳 **Payment Integration** - Connect Paynow, Stripe webhooks
+7. 📹 **Video Storage** - Set up Cloudflare Stream integration
+8. 📧 **Notifications** - Email and SMS integration
+9. 🚀 **Deploy** - Deploy to Vercel with Supabase
 
 ---
 

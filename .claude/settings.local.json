@@ -22,7 +22,17 @@
       "Bash(node seed-data.js:*)",
       "Bash(node test-connection.js:*)",
       "Bash(node create-admin.js:*)",
-      "Bash(node create-admin-simple.js:*)"
+      "Bash(node create-admin-simple.js:*)",
+      "Bash(chmod:*)",
+      "Bash(node test-db-connection.js:*)",
+      "Bash(node scripts/test-db.mjs:*)",
+      "Bash(node scripts/seed-database.mjs:*)",
+      "Bash(node scripts/check-schema.mjs:*)",
+      "Bash(node scripts/seed-v2.mjs:*)",
+      "Bash(node scripts/verify-data.mjs:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
