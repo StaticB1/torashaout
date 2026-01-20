@@ -14,7 +14,12 @@ import {
   approveTalent,
   rejectTalent,
   reapproveTalent,
-  getRevenueAnalytics
+  getRevenueAnalytics,
+  getCategoryAnalytics,
+  getFlaggedContent,
+  updateFlaggedContentStatus,
+  getAdminNotificationCount,
+  getPlatformStatsWithGrowth
 } from '@/lib/api/admin.client'
 
 export interface PlatformStats {
@@ -73,12 +78,40 @@ export interface RevenueData {
   bookings: number
 }
 
+export interface CategoryAnalytics {
+  category: string
+  bookings: number
+  percentage: number
+}
+
+export interface FlaggedContent {
+  id: string
+  bookingCode: string
+  talentName: string
+  customerName: string
+  reason: string
+  reportedAt: string
+  status: string
+  adminNotes?: string
+  reporterName?: string
+}
+
+export interface GrowthMetrics {
+  userGrowth: number
+  talentGrowth: number
+  bookingGrowth: number
+}
+
 export function useAdminDashboard() {
   const [stats, setStats] = useState<PlatformStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
   const [pendingTalents, setPendingTalents] = useState<PendingTalent[]>([])
   const [rejectedTalents, setRejectedTalents] = useState<RejectedTalent[]>([])
   const [revenueData, setRevenueData] = useState<RevenueData[]>([])
+  const [categoryAnalytics, setCategoryAnalytics] = useState<CategoryAnalytics[]>([])
+  const [flaggedContent, setFlaggedContent] = useState<FlaggedContent[]>([])
+  const [notificationCount, setNotificationCount] = useState(0)
+  const [growthMetrics, setGrowthMetrics] = useState<GrowthMetrics>({ userGrowth: 0, talentGrowth: 0, bookingGrowth: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -133,12 +166,26 @@ export function useAdminDashboard() {
       setError(null)
 
       // Load all data in parallel
-      const [statsData, bookingsData, talentsData, rejectedData, revenueAnalytics] = await Promise.all([
+      const [
+        statsData,
+        bookingsData,
+        talentsData,
+        rejectedData,
+        revenueAnalytics,
+        categoryData,
+        flaggedData,
+        notifCount,
+        growthData
+      ] = await Promise.all([
         getPlatformStats(),
         getRecentBookings(10),
         getPendingTalents({ page: pendingPage, pageSize }),
         getRejectedTalents({ page: rejectedPage, pageSize }),
-        getRevenueAnalytics(6)
+        getRevenueAnalytics(6),
+        getCategoryAnalytics(),
+        getFlaggedContent(),
+        getAdminNotificationCount(),
+        getPlatformStatsWithGrowth()
       ])
 
       setStats(statsData)
@@ -150,6 +197,10 @@ export function useAdminDashboard() {
       setRejectedTotal(rejectedData.total)
       setRejectedTotalPages(rejectedData.totalPages)
       setRevenueData(revenueAnalytics)
+      setCategoryAnalytics(categoryData)
+      setFlaggedContent(flaggedData)
+      setNotificationCount(notifCount)
+      setGrowthMetrics(growthData)
 
     } catch (err) {
       console.error('Error loading admin dashboard:', err)
@@ -249,6 +300,31 @@ export function useAdminDashboard() {
     }
   }
 
+  // Update flagged content status
+  const handleUpdateFlaggedStatus = async (
+    flagId: string,
+    status: 'reviewing' | 'resolved' | 'dismissed',
+    adminNotes?: string
+  ) => {
+    try {
+      await updateFlaggedContentStatus(flagId, status, adminNotes)
+
+      // Refresh flagged content and notification count
+      const [newFlaggedData, newNotifCount] = await Promise.all([
+        getFlaggedContent(),
+        getAdminNotificationCount()
+      ])
+
+      setFlaggedContent(newFlaggedData)
+      setNotificationCount(newNotifCount)
+
+      return { success: true }
+    } catch (err) {
+      console.error('Error updating flagged content status:', err)
+      throw err
+    }
+  }
+
   // Refresh dashboard data
   const refresh = async () => {
     await loadDashboardData()
@@ -260,11 +336,16 @@ export function useAdminDashboard() {
     pendingTalents,
     rejectedTalents,
     revenueData,
+    categoryAnalytics,
+    flaggedContent,
+    notificationCount,
+    growthMetrics,
     loading,
     error,
     approveTalent: handleApproveTalent,
     rejectTalent: handleRejectTalent,
     reapproveTalent: handleReapproveTalent,
+    updateFlaggedStatus: handleUpdateFlaggedStatus,
     refresh,
     // Pagination
     pendingPage,

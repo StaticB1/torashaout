@@ -19,7 +19,8 @@ interface ActiveTalentDetailsModalProps {
     thumbnailUrl?: string
     isAcceptingBookings: boolean
     totalBookings: number
-    averageRating: number
+    averageRating: number | null
+    ratingCount?: number
     joinedAt: string
   }
   onToggleBookings?: (isAccepting: boolean) => void
@@ -103,7 +104,14 @@ export function ActiveTalentDetailsModal({
                   <Star className="w-5 h-5 text-yellow-400" />
                   <span className="text-xs text-neutral-400">Average Rating</span>
                 </div>
-                <p className="text-2xl font-bold text-yellow-400">{talent.averageRating.toFixed(1)}</p>
+                <p className="text-2xl font-bold text-yellow-400">
+                  {talent.averageRating !== null ? talent.averageRating.toFixed(1) : 'N/A'}
+                </p>
+                {talent.ratingCount !== undefined && talent.ratingCount > 0 && (
+                  <p className="text-xs text-neutral-500 mt-1">
+                    from {talent.ratingCount} {talent.ratingCount === 1 ? 'review' : 'reviews'}
+                  </p>
+                )}
               </div>
               <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 border border-blue-700/30 rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-2">

@@ -534,6 +534,7 @@ export async function getTalentCategories() {
 
 /**
  * Get all active (verified) talents with pagination
+ * Calculates real average rating from completed bookings
  */
 export async function getActiveTalents(filters?: {
   category?: string
@@ -617,22 +618,69 @@ export async function getActiveTalents(filters?: {
       }
     }
 
-    const talents = (data as any[]).map(talent => ({
-      id: talent.id,
-      name: talent.display_name,
-      category: talent.category,
-      email: (talent.user as any)?.email || '',
-      phone: (talent.user as any)?.phone || '',
-      bio: talent.bio,
-      priceUsd: talent.price_usd,
-      priceZig: talent.price_zig,
-      responseTime: talent.response_time_hours || 24,
-      thumbnailUrl: talent.thumbnail_url,
-      isAcceptingBookings: talent.is_accepting_bookings || false,
-      totalBookings: talent.total_bookings || 0,
-      averageRating: talent.average_rating || 0,
-      joinedAt: talent.created_at,
-    }))
+    // Get talent IDs to fetch their real ratings from bookings
+    const talentIds = (data as any[]).map(t => t.id)
+
+    // Fetch completed bookings with ratings for these talents
+    const { data: bookingsWithRatings } = await supabase
+      .from('bookings')
+      .select('talent_id, customer_rating')
+      .in('talent_id', talentIds)
+      .eq('status', 'completed')
+      .not('customer_rating', 'is', null)
+
+    // Calculate real average ratings per talent
+    const ratingsByTalent: Record<string, { sum: number; count: number }> = {}
+    if (bookingsWithRatings) {
+      for (const booking of bookingsWithRatings as any[]) {
+        if (!ratingsByTalent[booking.talent_id]) {
+          ratingsByTalent[booking.talent_id] = { sum: 0, count: 0 }
+        }
+        ratingsByTalent[booking.talent_id].sum += Number(booking.customer_rating)
+        ratingsByTalent[booking.talent_id].count += 1
+      }
+    }
+
+    // Also fetch real total bookings count (completed only)
+    const { data: bookingCounts } = await supabase
+      .from('bookings')
+      .select('talent_id')
+      .in('talent_id', talentIds)
+      .eq('status', 'completed')
+
+    const completedBookingsByTalent: Record<string, number> = {}
+    if (bookingCounts) {
+      for (const booking of bookingCounts as any[]) {
+        completedBookingsByTalent[booking.talent_id] = (completedBookingsByTalent[booking.talent_id] || 0) + 1
+      }
+    }
+
+    const talents = (data as any[]).map(talent => {
+      const ratingData = ratingsByTalent[talent.id]
+      const realAverageRating = ratingData && ratingData.count > 0
+        ? ratingData.sum / ratingData.count
+        : null
+      const ratingCount = ratingData?.count || 0
+      const completedBookings = completedBookingsByTalent[talent.id] || 0
+
+      return {
+        id: talent.id,
+        name: talent.display_name,
+        category: talent.category,
+        email: (talent.user as any)?.email || '',
+        phone: (talent.user as any)?.phone || '',
+        bio: talent.bio,
+        priceUsd: talent.price_usd,
+        priceZig: talent.price_zig,
+        responseTime: talent.response_time_hours || 24,
+        thumbnailUrl: talent.thumbnail_url,
+        isAcceptingBookings: talent.is_accepting_bookings || false,
+        totalBookings: completedBookings,
+        averageRating: realAverageRating,
+        ratingCount: ratingCount,
+        joinedAt: talent.created_at,
+      }
+    })
 
     return {
       data: talents,
@@ -762,4 +810,289 @@ export async function reapproveTalent(talentId: string) {
   }
 
   return { success: true }
+}
+
+/**
+ * Get category analytics - booking counts per talent category
+ */
+export async function getCategoryAnalytics() {
+  const supabase = createClient()
+
+  try {
+    // Fetch all completed bookings with their talent's category
+    const { data: bookings, error } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        talent:talent_id (
+          category
+        )
+      `)
+      .eq('status', 'completed')
+
+    if (error) {
+      console.error('Error fetching category analytics:', error)
+      throw error
+    }
+
+    if (!bookings || bookings.length === 0) {
+      return []
+    }
+
+    // Count bookings per category
+    const categoryCounts: Record<string, number> = {}
+    let totalBookings = 0
+
+    for (const booking of bookings as any[]) {
+      const category = booking.talent?.category
+      if (category) {
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1
+        totalBookings++
+      }
+    }
+
+    // Convert to array and calculate percentages
+    const categoryData = Object.entries(categoryCounts)
+      .map(([category, bookings]) => ({
+        category: formatCategoryName(category),
+        bookings,
+        percentage: totalBookings > 0 ? Math.round((bookings / totalBookings) * 100) : 0
+      }))
+      .sort((a, b) => b.bookings - a.bookings)
+
+    return categoryData
+  } catch (err) {
+    console.error('Error in getCategoryAnalytics:', err)
+    return []
+  }
+}
+
+/**
+ * Helper to format category names for display
+ */
+function formatCategoryName(category: string): string {
+  const categoryMap: Record<string, string> = {
+    'musician': 'Musicians',
+    'comedian': 'Comedians',
+    'gospel': 'Gospel Artists',
+    'business': 'Business',
+    'sports': 'Sports',
+    'influencer': 'Influencers',
+    'other': 'Other'
+  }
+  return categoryMap[category] || category.charAt(0).toUpperCase() + category.slice(1)
+}
+
+/**
+ * Get flagged content for moderation
+ */
+export async function getFlaggedContent() {
+  const supabase = createClient()
+
+  try {
+    const { data, error } = await supabase
+      .from('flagged_content')
+      .select(`
+        id,
+        reason,
+        status,
+        admin_notes,
+        created_at,
+        resolved_at,
+        booking:booking_id (
+          id,
+          booking_code,
+          customer:customer_id (
+            full_name
+          ),
+          talent:talent_id (
+            display_name
+          )
+        ),
+        reporter:reporter_id (
+          full_name
+        )
+      `)
+      .in('status', ['pending', 'reviewing'])
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      // Table might not exist yet
+      if (error.code === '42P01') {
+        console.warn('flagged_content table does not exist yet')
+        return []
+      }
+      console.error('Error fetching flagged content:', error)
+      throw error
+    }
+
+    if (!data) {
+      return []
+    }
+
+    return (data as any[]).map(item => ({
+      id: item.id,
+      bookingCode: item.booking?.booking_code || 'Unknown',
+      talentName: item.booking?.talent?.display_name || 'Unknown',
+      customerName: item.booking?.customer?.full_name || 'Unknown',
+      reason: item.reason,
+      reportedAt: item.created_at,
+      status: item.status,
+      adminNotes: item.admin_notes,
+      reporterName: item.reporter?.full_name || 'Anonymous'
+    }))
+  } catch (err) {
+    console.error('Error in getFlaggedContent:', err)
+    return []
+  }
+}
+
+/**
+ * Update flagged content status
+ */
+export async function updateFlaggedContentStatus(
+  flagId: string,
+  status: 'reviewing' | 'resolved' | 'dismissed',
+  adminNotes?: string
+) {
+  const supabase = createClient()
+
+  const updateData: any = {
+    status,
+    admin_notes: adminNotes
+  }
+
+  if (status === 'resolved' || status === 'dismissed') {
+    updateData.resolved_at = new Date().toISOString()
+    // Get current user as resolver
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      updateData.resolved_by = user.id
+    }
+  }
+
+  const { error } = await supabase
+    .from('flagged_content')
+    // @ts-ignore - Supabase type inference issue with dynamic updateData
+    .update(updateData)
+    .eq('id', flagId)
+
+  if (error) {
+    console.error('Error updating flagged content status:', error)
+    throw error
+  }
+
+  return { success: true }
+}
+
+/**
+ * Get admin notification count (pending actions)
+ */
+export async function getAdminNotificationCount() {
+  const supabase = createClient()
+
+  try {
+    // Count pending talent verifications
+    const { count: pendingTalents } = await supabase
+      .from('talent_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('admin_verified', false)
+      .or('verification_status.eq.pending,verification_status.is.null')
+
+    // Count pending flagged content
+    let pendingFlags = 0
+    try {
+      const { count } = await supabase
+        .from('flagged_content')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['pending', 'reviewing'])
+      pendingFlags = count || 0
+    } catch {
+      // Table might not exist
+      pendingFlags = 0
+    }
+
+    return (pendingTalents || 0) + pendingFlags
+  } catch (err) {
+    console.error('Error getting admin notification count:', err)
+    return 0
+  }
+}
+
+/**
+ * Get extended platform stats with growth metrics
+ */
+export async function getPlatformStatsWithGrowth() {
+  const supabase = createClient()
+
+  try {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const sixtyDaysAgo = new Date()
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+
+    // Get current period user count (last 30 days)
+    const { count: currentPeriodUsers } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', thirtyDaysAgo.toISOString())
+
+    // Get previous period user count (30-60 days ago)
+    const { count: previousPeriodUsers } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', sixtyDaysAgo.toISOString())
+      .lt('created_at', thirtyDaysAgo.toISOString())
+
+    // Get current period talent count
+    const { count: currentPeriodTalents } = await supabase
+      .from('talent_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('admin_verified', true)
+      .gte('created_at', thirtyDaysAgo.toISOString())
+
+    // Get previous period talent count
+    const { count: previousPeriodTalents } = await supabase
+      .from('talent_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('admin_verified', true)
+      .gte('created_at', sixtyDaysAgo.toISOString())
+      .lt('created_at', thirtyDaysAgo.toISOString())
+
+    // Get current period booking count
+    const { count: currentPeriodBookings } = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', thirtyDaysAgo.toISOString())
+
+    // Get previous period booking count
+    const { count: previousPeriodBookings } = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', sixtyDaysAgo.toISOString())
+      .lt('created_at', thirtyDaysAgo.toISOString())
+
+    // Calculate growth percentages
+    const calculateGrowth = (current: number, previous: number): number => {
+      if (previous === 0) return current > 0 ? 100 : 0
+      return Math.round(((current - previous) / previous) * 100)
+    }
+
+    const userGrowth = calculateGrowth(currentPeriodUsers || 0, previousPeriodUsers || 0)
+    const talentGrowth = calculateGrowth(currentPeriodTalents || 0, previousPeriodTalents || 0)
+    const bookingGrowth = calculateGrowth(currentPeriodBookings || 0, previousPeriodBookings || 0)
+
+    return {
+      userGrowth,
+      talentGrowth,
+      bookingGrowth
+    }
+  } catch (err) {
+    console.error('Error calculating growth metrics:', err)
+    return {
+      userGrowth: 0,
+      talentGrowth: 0,
+      bookingGrowth: 0
+    }
+  }
 }

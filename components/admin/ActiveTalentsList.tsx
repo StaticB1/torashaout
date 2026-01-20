@@ -35,7 +35,8 @@ interface ActiveTalent {
   thumbnailUrl?: string
   isAcceptingBookings: boolean
   totalBookings: number
-  averageRating: number
+  averageRating: number | null
+  ratingCount?: number
   joinedAt: string
 }
 
@@ -234,7 +235,11 @@ export function ActiveTalentsList() {
                       </div>
                       <div className="flex items-center gap-2 text-neutral-400">
                         <Star className="w-4 h-4 text-yellow-400" />
-                        <span>{talent.averageRating?.toFixed(1) || 'N/A'} rating</span>
+                        <span>
+                          {talent.averageRating !== null
+                            ? `${talent.averageRating.toFixed(1)} (${talent.ratingCount || 0})`
+                            : 'No ratings'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-neutral-400">
                         <DollarSign className="w-4 h-4" />

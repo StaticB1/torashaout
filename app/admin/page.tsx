@@ -47,27 +47,6 @@ import { useToast } from '@/components/ui/Toast';
 import { TalentReviewModal } from '@/components/admin/TalentReviewModal';
 import { Pagination } from '@/components/ui/Pagination';
 
-// Mock flagged content (this will be implemented later)
-const mockFlaggedContent = [
-  {
-    id: '1',
-    bookingCode: 'TS-2026-0120',
-    talentName: 'Winky D',
-    customerName: 'John D.',
-    reason: 'Video quality issues',
-    reportedAt: '2026-01-16T12:00:00Z',
-    status: 'pending',
-  },
-  {
-    id: '2',
-    bookingCode: 'TS-2026-0115',
-    talentName: 'Comic Pastor',
-    customerName: 'Mary S.',
-    reason: 'Inappropriate content',
-    reportedAt: '2026-01-15T09:30:00Z',
-    status: 'reviewing',
-  },
-];
 
 type TabType = 'overview' | 'talents' | 'bookings' | 'moderation' | 'analytics';
 
@@ -112,11 +91,16 @@ function AdminPanelContent() {
     pendingTalents,
     rejectedTalents,
     revenueData,
+    categoryAnalytics,
+    flaggedContent,
+    notificationCount,
+    growthMetrics,
     loading,
     error,
     approveTalent,
     rejectTalent,
     reapproveTalent,
+    updateFlaggedStatus,
     refresh,
     // Pagination
     pendingPage,
@@ -210,7 +194,7 @@ function AdminPanelContent() {
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
     { id: 'talents' as TabType, label: 'Talent Management', icon: Users, badge: stats?.pendingVerifications || 0 },
     { id: 'bookings' as TabType, label: 'Bookings', icon: Video },
-    { id: 'moderation' as TabType, label: 'Moderation', icon: Flag, badge: mockFlaggedContent.length },
+    { id: 'moderation' as TabType, label: 'Moderation', icon: Flag, badge: flaggedContent.length },
     { id: 'analytics' as TabType, label: 'Analytics', icon: BarChart3 },
   ];
 
@@ -277,7 +261,11 @@ function AdminPanelContent() {
           <div className="flex items-center gap-3 mt-4 md:mt-0">
             <button className="relative p-2 bg-neutral-900 rounded-lg hover:bg-neutral-800 transition">
               <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">5</span>
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                  {notificationCount > 9 ? '9+' : notificationCount}
+                </span>
+              )}
             </button>
             <Button size="sm" variant="outline">
               <Download className="w-4 h-4 mr-2" />
@@ -324,9 +312,9 @@ function AdminPanelContent() {
                   <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
                     <Users className="w-5 h-5 text-purple-400" />
                   </div>
-                  <span className="flex items-center text-green-400 text-sm">
-                    <ArrowUpRight className="w-4 h-4" />
-                    8%
+                  <span className={`flex items-center text-sm ${growthMetrics.userGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {growthMetrics.userGrowth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                    {Math.abs(growthMetrics.userGrowth)}%
                   </span>
                 </div>
                 <p className="text-2xl font-bold">{platformStats.totalUsers.toLocaleString()}</p>
@@ -338,9 +326,9 @@ function AdminPanelContent() {
                   <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
                     <Star className="w-5 h-5 text-pink-400" />
                   </div>
-                  <span className="flex items-center text-green-400 text-sm">
-                    <ArrowUpRight className="w-4 h-4" />
-                    5%
+                  <span className={`flex items-center text-sm ${growthMetrics.talentGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {growthMetrics.talentGrowth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                    {Math.abs(growthMetrics.talentGrowth)}%
                   </span>
                 </div>
                 <p className="text-2xl font-bold">{platformStats.activeTalents}</p>
@@ -352,9 +340,9 @@ function AdminPanelContent() {
                   <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
                     <Video className="w-5 h-5 text-green-400" />
                   </div>
-                  <span className="flex items-center text-green-400 text-sm">
-                    <ArrowUpRight className="w-4 h-4" />
-                    15%
+                  <span className={`flex items-center text-sm ${growthMetrics.bookingGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {growthMetrics.bookingGrowth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                    {Math.abs(growthMetrics.bookingGrowth)}%
                   </span>
                 </div>
                 <p className="text-2xl font-bold">{platformStats.totalBookings.toLocaleString()}</p>
@@ -820,59 +808,81 @@ function AdminPanelContent() {
         {activeTab === 'moderation' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">Flagged Content ({mockFlaggedContent.length})</h2>
+              <h2 className="text-xl font-bold">Flagged Content ({flaggedContent.length})</h2>
               <Button size="sm" variant="outline">
                 <Filter className="w-4 h-4 mr-2" />
                 Filter
               </Button>
             </div>
 
-            <div className="space-y-4">
-              {mockFlaggedContent.map((item) => (
-                <div key={item.id} className="bg-neutral-900 rounded-xl p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
-                        <Flag className="w-5 h-5 text-red-400" />
+            {flaggedContent.length === 0 ? (
+              <div className="bg-neutral-900 rounded-xl p-12 text-center">
+                <Flag className="w-12 h-12 text-neutral-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Flagged Content</h3>
+                <p className="text-neutral-400">There is no flagged content to review at this time.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {flaggedContent.map((item) => (
+                  <div key={item.id} className="bg-neutral-900 rounded-xl p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
+                          <Flag className="w-5 h-5 text-red-400" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold">{item.bookingCode}</h3>
+                          <p className="text-sm text-neutral-400">{item.talentName} • Reported by {item.customerName}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold">{item.bookingCode}</h3>
-                        <p className="text-sm text-neutral-400">{item.talentName} • Reported by {item.customerName}</p>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        item.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-purple-500/20 text-purple-400'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
+                    <div className="bg-black/50 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-neutral-300">
+                        <span className="font-semibold text-red-400">Reason: </span>
+                        {item.reason}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-neutral-400">Reported: {formatDate(item.reportedAt)}</p>
+                      <div className="flex gap-2">
+                        {item.status === 'pending' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateFlaggedStatus(item.id, 'reviewing')}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Review
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateFlaggedStatus(item.id, 'resolved')}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Resolve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateFlaggedStatus(item.id, 'dismissed')}
+                        >
+                          <Ban className="w-4 h-4 mr-1" />
+                          Dismiss
+                        </Button>
                       </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      item.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-purple-500/20 text-purple-400'
-                    }`}>
-                      {item.status}
-                    </span>
                   </div>
-                  <div className="bg-black/50 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-neutral-300">
-                      <span className="font-semibold text-red-400">Reason: </span>
-                      {item.reason}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-neutral-400">Reported: {formatDate(item.reportedAt)}</p>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
-                        <Eye className="w-4 h-4 mr-1" />
-                        Review
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Resolve
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Ban className="w-4 h-4 mr-1" />
-                        Take Action
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -900,28 +910,28 @@ function AdminPanelContent() {
 
               <div className="bg-neutral-900 rounded-xl p-6">
                 <h3 className="font-bold mb-4">Top Performing Categories</h3>
-                <div className="space-y-4">
-                  {[
-                    { category: 'Musicians', bookings: 1245, percentage: 36 },
-                    { category: 'Comedians', bookings: 892, percentage: 26 },
-                    { category: 'Gospel Artists', bookings: 654, percentage: 19 },
-                    { category: 'Sports', bookings: 438, percentage: 13 },
-                    { category: 'Influencers', bookings: 192, percentage: 6 },
-                  ].map((item, idx) => (
-                    <div key={idx}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-neutral-300">{item.category}</span>
-                        <span className="font-medium">{item.bookings} bookings</span>
+                {categoryAnalytics.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-neutral-400">No booking data available yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {categoryAnalytics.map((item, idx) => (
+                      <div key={idx}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-neutral-300">{item.category}</span>
+                          <span className="font-medium">{item.bookings} bookings</span>
+                        </div>
+                        <div className="w-full bg-neutral-800 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full"
+                            style={{ width: `${item.percentage}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-neutral-800 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full"
-                          style={{ width: `${item.percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

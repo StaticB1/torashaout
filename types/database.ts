@@ -290,6 +290,41 @@ export interface Database {
           created_at?: string
         }
       }
+      flagged_content: {
+        Row: {
+          id: string
+          booking_id: string
+          reporter_id: string
+          reason: string
+          status: 'pending' | 'reviewing' | 'resolved' | 'dismissed'
+          admin_notes: string | null
+          created_at: string
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          reporter_id: string
+          reason: string
+          status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed'
+          admin_notes?: string | null
+          created_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          reporter_id?: string
+          reason?: string
+          status?: 'pending' | 'reviewing' | 'resolved' | 'dismissed'
+          admin_notes?: string | null
+          created_at?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
