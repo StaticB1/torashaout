@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -27,6 +27,8 @@ import {
   Filter,
   Download,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ArrowUpRight,
   ArrowDownRight,
   Bell,
@@ -38,82 +40,10 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useAdminDashboard } from '@/lib/hooks/useAdminDashboard';
+import { ActiveTalentsList } from '@/components/admin/ActiveTalentsList';
 
-// Mock data for admin dashboard
-const mockPlatformStats = {
-  totalUsers: 2547,
-  totalTalents: 156,
-  activeTalents: 124,
-  pendingVerifications: 8,
-  totalBookings: 3421,
-  completedBookings: 2987,
-  totalRevenue: 142750,
-  monthlyRevenue: 18450,
-  revenueGrowth: 12.5,
-  avgBookingValue: 48.5,
-  platformFee: 0.25,
-  totalPayouts: 107063,
-};
-
-const mockRecentBookings = [
-  {
-    id: '1',
-    bookingCode: 'TS-2026-0127',
-    customerName: 'Tendai M.',
-    talentName: 'Winky D',
-    amount: 50,
-    status: 'completed',
-    createdAt: '2026-01-16T10:30:00Z',
-  },
-  {
-    id: '2',
-    bookingCode: 'TS-2026-0126',
-    customerName: 'Sarah K.',
-    talentName: 'Comic Pastor',
-    amount: 35,
-    status: 'in_progress',
-    createdAt: '2026-01-16T08:15:00Z',
-  },
-  {
-    id: '3',
-    bookingCode: 'TS-2026-0125',
-    customerName: 'Michael J.',
-    talentName: 'Janet Manyowa',
-    amount: 40,
-    status: 'payment_confirmed',
-    createdAt: '2026-01-15T14:20:00Z',
-  },
-];
-
-const mockPendingTalents = [
-  {
-    id: '1',
-    name: 'Jah Prayzah',
-    category: 'Musician',
-    email: 'jah@example.com',
-    phone: '+263 77 123 4567',
-    appliedAt: '2026-01-15T10:00:00Z',
-    socialMedia: {
-      instagram: '2.5M',
-      facebook: '1.8M',
-    },
-    requestedPrice: 75,
-  },
-  {
-    id: '2',
-    name: 'Kikky Badass',
-    category: 'Musician',
-    email: 'kikky@example.com',
-    phone: '+263 71 987 6543',
-    appliedAt: '2026-01-14T15:30:00Z',
-    socialMedia: {
-      instagram: '890K',
-      facebook: '450K',
-    },
-    requestedPrice: 45,
-  },
-];
-
+// Mock flagged content (this will be implemented later)
 const mockFlaggedContent = [
   {
     id: '1',
@@ -135,23 +65,86 @@ const mockFlaggedContent = [
   },
 ];
 
-const mockRevenueData = [
-  { month: 'Aug', revenue: 12500, bookings: 258 },
-  { month: 'Sep', revenue: 14200, bookings: 293 },
-  { month: 'Oct', revenue: 16800, bookings: 346 },
-  { month: 'Nov', revenue: 15400, bookings: 318 },
-  { month: 'Dec', revenue: 21000, bookings: 433 },
-  { month: 'Jan', revenue: 18450, bookings: 380 },
-];
-
 type TabType = 'overview' | 'talents' | 'bookings' | 'moderation' | 'analytics';
 
 function AdminPanelContent() {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [showPendingTalents, setShowPendingTalents] = useState(true);
+  const [showActiveTalents, setShowActiveTalents] = useState(true);
+  const [showRejectedTalents, setShowRejectedTalents] = useState(false);
   const { user, profile } = useAuth();
 
+  // Get real data from backend
+  const {
+    stats,
+    recentBookings,
+    pendingTalents,
+    rejectedTalents,
+    revenueData,
+    loading,
+    error,
+    approveTalent,
+    rejectTalent,
+    reapproveTalent,
+    refresh
+  } = useAdminDashboard();
+
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'Admin';
+
+  // Handle approve talent
+  const handleApproveTalent = async (talentId: string) => {
+    const talent = pendingTalents.find(t => t.id === talentId);
+    if (!talent) return;
+
+    if (!confirm(`Approve ${talent.name} as a talent on the platform?`)) {
+      return;
+    }
+
+    try {
+      await approveTalent(talentId);
+      alert(`✅ ${talent.name} has been approved and can now accept bookings!`);
+    } catch (err) {
+      console.error('Failed to approve talent:', err);
+      alert('❌ Failed to approve talent. Please try again.');
+    }
+  };
+
+  // Handle reject talent
+  const handleRejectTalent = async (talentId: string) => {
+    const talent = pendingTalents.find(t => t.id === talentId);
+    if (!talent) return;
+
+    if (!confirm(`Reject ${talent.name}'s application?`)) {
+      return;
+    }
+
+    try {
+      await rejectTalent(talentId);
+      alert(`${talent.name}'s application has been rejected.`);
+    } catch (err) {
+      console.error('Failed to reject talent:', err);
+      alert('❌ Failed to reject talent. Please try again.');
+    }
+  };
+
+  // Handle re-approve talent
+  const handleReapproveTalent = async (talentId: string) => {
+    const talent = rejectedTalents.find(t => t.id === talentId);
+    if (!talent) return;
+
+    if (!confirm(`Re-approve ${talent.name} and allow them to accept bookings?`)) {
+      return;
+    }
+
+    try {
+      await reapproveTalent(talentId);
+      alert(`✅ ${talent.name} has been re-approved and can now accept bookings!`);
+    } catch (err) {
+      console.error('Failed to re-approve talent:', err);
+      alert('❌ Failed to re-approve talent. Please try again.');
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -163,11 +156,60 @@ function AdminPanelContent() {
 
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
-    { id: 'talents' as TabType, label: 'Talent Management', icon: Users, badge: mockPlatformStats.pendingVerifications },
+    { id: 'talents' as TabType, label: 'Talent Management', icon: Users, badge: stats?.pendingVerifications || 0 },
     { id: 'bookings' as TabType, label: 'Bookings', icon: Video },
     { id: 'moderation' as TabType, label: 'Moderation', icon: Flag, badge: mockFlaggedContent.length },
     { id: 'analytics' as TabType, label: 'Analytics', icon: BarChart3 },
   ];
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+        <div className="container mx-auto px-4 py-8 pt-24">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-neutral-400">Loading dashboard data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+        <div className="container mx-auto px-4 py-8 pt-24">
+          <div className="bg-red-900/20 border border-red-500 rounded-xl p-6">
+            <h2 className="text-xl font-bold text-red-400 mb-2">Error Loading Dashboard</h2>
+            <p className="text-neutral-300 mb-4">{error}</p>
+            <Button onClick={refresh}>Retry</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default stats if data not loaded yet
+  const platformStats = stats || {
+    totalUsers: 0,
+    totalTalents: 0,
+    activeTalents: 0,
+    pendingVerifications: 0,
+    totalBookings: 0,
+    completedBookings: 0,
+    totalRevenue: 0,
+    monthlyRevenue: 0,
+    revenueGrowth: 0,
+    avgBookingValue: 0,
+    platformFee: 0.10,
+    totalPayouts: 0,
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -235,7 +277,7 @@ function AdminPanelContent() {
                     8%
                   </span>
                 </div>
-                <p className="text-2xl font-bold">{mockPlatformStats.totalUsers.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{platformStats.totalUsers.toLocaleString()}</p>
                 <p className="text-sm text-neutral-400">Total Users</p>
               </div>
 
@@ -249,7 +291,7 @@ function AdminPanelContent() {
                     5%
                   </span>
                 </div>
-                <p className="text-2xl font-bold">{mockPlatformStats.activeTalents}</p>
+                <p className="text-2xl font-bold">{platformStats.activeTalents}</p>
                 <p className="text-sm text-neutral-400">Active Talents</p>
               </div>
 
@@ -263,7 +305,7 @@ function AdminPanelContent() {
                     15%
                   </span>
                 </div>
-                <p className="text-2xl font-bold">{mockPlatformStats.totalBookings.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{platformStats.totalBookings.toLocaleString()}</p>
                 <p className="text-sm text-neutral-400">Total Bookings</p>
               </div>
 
@@ -274,10 +316,10 @@ function AdminPanelContent() {
                   </div>
                   <span className="flex items-center text-green-400 text-sm">
                     <ArrowUpRight className="w-4 h-4" />
-                    {mockPlatformStats.revenueGrowth}%
+                    {platformStats.revenueGrowth}%
                   </span>
                 </div>
-                <p className="text-2xl font-bold">${mockPlatformStats.totalRevenue.toLocaleString()}</p>
+                <p className="text-2xl font-bold">${platformStats.totalRevenue.toLocaleString()}</p>
                 <p className="text-sm text-neutral-400">Total Revenue</p>
               </div>
             </div>
@@ -287,7 +329,7 @@ function AdminPanelContent() {
               <div className="lg:col-span-2 bg-neutral-900 rounded-xl p-6">
                 <h2 className="text-xl font-bold mb-6">Revenue Overview</h2>
                 <div className="h-64 flex items-end gap-4">
-                  {mockRevenueData.map((item, idx) => (
+                  {revenueData.map((item, idx) => (
                     <div key={idx} className="flex-1 flex flex-col items-center">
                       <div
                         className="w-full bg-gradient-to-t from-purple-600 to-pink-600 rounded-t-lg transition-all hover:opacity-80 cursor-pointer"
@@ -303,10 +345,10 @@ function AdminPanelContent() {
               <div className="space-y-6">
                 <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-xl p-6">
                   <h3 className="font-bold mb-2">This Month</h3>
-                  <p className="text-3xl font-bold text-gradient-brand">${mockPlatformStats.monthlyRevenue.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gradient-brand">${platformStats.monthlyRevenue.toLocaleString()}</p>
                   <p className="text-sm text-green-400 mt-2 flex items-center">
                     <ArrowUpRight className="w-4 h-4 mr-1" />
-                    {mockPlatformStats.revenueGrowth}% vs last month
+                    {platformStats.revenueGrowth}% vs last month
                   </p>
                 </div>
 
@@ -315,20 +357,20 @@ function AdminPanelContent() {
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-400">Avg. Booking Value</span>
-                      <span className="font-semibold">${mockPlatformStats.avgBookingValue}</span>
+                      <span className="font-semibold">${platformStats.avgBookingValue}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-400">Platform Fee</span>
-                      <span className="font-semibold">{mockPlatformStats.platformFee * 100}%</span>
+                      <span className="font-semibold">{platformStats.platformFee * 100}%</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-400">Total Payouts</span>
-                      <span className="font-semibold">${mockPlatformStats.totalPayouts.toLocaleString()}</span>
+                      <span className="font-semibold">${platformStats.totalPayouts.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-400">Completion Rate</span>
                       <span className="font-semibold text-green-400">
-                        {((mockPlatformStats.completedBookings / mockPlatformStats.totalBookings) * 100).toFixed(1)}%
+                        {((platformStats.completedBookings / platformStats.totalBookings) * 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -349,7 +391,7 @@ function AdminPanelContent() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {mockRecentBookings.map((booking) => (
+                  {recentBookings.map((booking) => (
                     <div key={booking.id} className="bg-black/50 rounded-lg p-4 flex items-center justify-between">
                       <div>
                         <p className="font-semibold text-sm">{booking.bookingCode}</p>
@@ -381,7 +423,7 @@ function AdminPanelContent() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {mockPendingTalents.slice(0, 3).map((talent) => (
+                  {pendingTalents.slice(0, 3).map((talent) => (
                     <div key={talent.id} className="bg-black/50 rounded-lg p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -392,7 +434,7 @@ function AdminPanelContent() {
                           Pending
                         </span>
                       </div>
-                      <p className="text-xs text-neutral-500">Instagram: {talent.socialMedia.instagram} followers</p>
+                      <p className="text-xs text-neutral-500">Requested: ${talent.requestedPrice}/video</p>
                     </div>
                   ))}
                 </div>
@@ -404,22 +446,41 @@ function AdminPanelContent() {
         {/* Talent Management Tab */}
         {activeTab === 'talents' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">Pending Verifications ({mockPendingTalents.length})</h2>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Search className="w-4 h-4 mr-2" />
-                  Search
-                </Button>
-              </div>
-            </div>
+            {/* Pending Verifications Section */}
+            <div className="bg-neutral-900 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowPendingTalents(!showPendingTalents)}
+                className="w-full flex items-center justify-between p-6 hover:bg-neutral-800/50 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold">Pending Verifications</h2>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    pendingTalents.length > 0
+                      ? 'bg-yellow-500/20 text-yellow-400'
+                      : 'bg-neutral-700 text-neutral-400'
+                  }`}>
+                    {pendingTalents.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {showPendingTalents ? (
+                    <ChevronUp className="w-5 h-5 text-neutral-400" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-neutral-400" />
+                  )}
+                </div>
+              </button>
 
-            <div className="space-y-4">
-              {mockPendingTalents.map((talent) => (
+              {showPendingTalents && (
+                <div className="px-6 pb-6">
+                  {pendingTalents.length === 0 ? (
+                    <div className="bg-black/50 rounded-lg p-8 text-center">
+                      <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                      <p className="text-neutral-400">No pending talent verifications</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {pendingTalents.map((talent) => (
                 <div key={talent.id} className="bg-neutral-900 rounded-xl p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     <div className="flex-1">
@@ -439,9 +500,8 @@ function AdminPanelContent() {
                           <p className="text-sm text-neutral-400">{talent.phone}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-neutral-500 mb-1">Social Media</p>
-                          <p className="text-sm">Instagram: {talent.socialMedia.instagram}</p>
-                          <p className="text-sm text-neutral-400">Facebook: {talent.socialMedia.facebook}</p>
+                          <p className="text-xs text-neutral-500 mb-1">Bio</p>
+                          <p className="text-sm text-neutral-400 line-clamp-2">{talent.bio || 'No bio provided'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-neutral-400">
@@ -456,7 +516,7 @@ function AdminPanelContent() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button size="sm">
+                      <Button size="sm" onClick={() => handleApproveTalent(talent.id)}>
                         <CheckCircle className="w-4 h-4 mr-1" />
                         Approve
                       </Button>
@@ -464,7 +524,7 @@ function AdminPanelContent() {
                         <Eye className="w-4 h-4 mr-1" />
                         Review Details
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={() => handleRejectTalent(talent.id)}>
                         <XCircle className="w-4 h-4 mr-1" />
                         Reject
                       </Button>
@@ -472,27 +532,138 @@ function AdminPanelContent() {
                   </div>
                 </div>
               ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Active Talents Section */}
-            <div className="mt-8">
-              <h2 className="text-xl font-bold mb-4">Active Talents ({mockPlatformStats.activeTalents})</h2>
-              <div className="bg-neutral-900 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Search talents..."
-                      className="bg-black/50 border border-neutral-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-                  <Button size="sm" variant="outline">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export List
-                  </Button>
+            <div className="bg-neutral-900 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowActiveTalents(!showActiveTalents)}
+                className="w-full flex items-center justify-between p-6 hover:bg-neutral-800/50 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold">Active Talents</h2>
+                  <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-semibold">
+                    {platformStats.activeTalents}
+                  </span>
                 </div>
-                <p className="text-sm text-neutral-400">Active talent management interface would go here</p>
-              </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={(e) => {
+                    e.stopPropagation();
+                  }}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                  {showActiveTalents ? (
+                    <ChevronUp className="w-5 h-5 text-neutral-400" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-neutral-400" />
+                  )}
+                </div>
+              </button>
+
+              {showActiveTalents && (
+                <div className="px-6 pb-6">
+                  <ActiveTalentsList key={platformStats.activeTalents} />
+                </div>
+              )}
+            </div>
+
+            {/* Rejected Talents Section */}
+            <div className="bg-neutral-900 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowRejectedTalents(!showRejectedTalents)}
+                className="w-full flex items-center justify-between p-6 hover:bg-neutral-800/50 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold">Rejected Applications</h2>
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    rejectedTalents.length > 0
+                      ? 'bg-red-500/20 text-red-400'
+                      : 'bg-neutral-700 text-neutral-400'
+                  }`}>
+                    {rejectedTalents.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {showRejectedTalents ? (
+                    <ChevronUp className="w-5 h-5 text-neutral-400" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-neutral-400" />
+                  )}
+                </div>
+              </button>
+
+              {showRejectedTalents && (
+                <div className="px-6 pb-6">
+                  {rejectedTalents.length === 0 ? (
+                    <div className="bg-black/50 rounded-lg p-8 text-center">
+                      <p className="text-neutral-400">No rejected talents</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {rejectedTalents.map((talent) => (
+                        <div key={talent.id} className="bg-black/50 rounded-xl p-6 border border-red-900/30">
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-orange-600 rounded-full flex items-center justify-center text-lg font-bold">
+                                  {talent.name.split(' ').map(n => n[0]).join('')}
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-bold">{talent.name}</h3>
+                                  <p className="text-sm text-neutral-400">{talent.category}</p>
+                                </div>
+                                <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full">
+                                  Rejected
+                                </span>
+                              </div>
+                              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                  <p className="text-xs text-neutral-500 mb-1">Contact</p>
+                                  <p className="text-sm">{talent.email}</p>
+                                  <p className="text-sm text-neutral-400">{talent.phone}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-neutral-500 mb-1">Bio</p>
+                                  <p className="text-sm text-neutral-400 line-clamp-2">{talent.bio || 'No bio provided'}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-neutral-400">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  Applied: {formatDate(talent.appliedAt)}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  Rejected: {formatDate(talent.rejectedAt)}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <DollarSign className="w-4 h-4" />
+                                  Requested: ${talent.requestedPrice}/video
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <Button size="sm" onClick={() => handleReapproveTalent(talent.id)}>
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Re-Approve
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Eye className="w-4 h-4 mr-1" />
+                                Review Details
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -501,7 +672,7 @@ function AdminPanelContent() {
         {activeTab === 'bookings' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">All Bookings ({mockPlatformStats.totalBookings})</h2>
+              <h2 className="text-xl font-bold">All Bookings ({platformStats.totalBookings})</h2>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline">
                   <Filter className="w-4 h-4 mr-2" />
@@ -529,7 +700,7 @@ function AdminPanelContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockRecentBookings.map((booking) => (
+                    {recentBookings.map((booking) => (
                       <tr key={booking.id} className="border-b border-neutral-800/50">
                         <td className="py-4 font-mono text-sm">{booking.bookingCode}</td>
                         <td className="py-4">{booking.customerName}</td>
@@ -628,7 +799,7 @@ function AdminPanelContent() {
               <div className="bg-neutral-900 rounded-xl p-6">
                 <h3 className="font-bold mb-4">User Growth</h3>
                 <div className="h-64 flex items-end gap-4">
-                  {mockRevenueData.map((item, idx) => (
+                  {revenueData.map((item, idx) => (
                     <div key={idx} className="flex-1 flex flex-col items-center">
                       <div
                         className="w-full bg-gradient-to-t from-blue-600 to-cyan-600 rounded-t-lg transition-all hover:opacity-80 cursor-pointer"
