@@ -212,29 +212,29 @@ export function ActiveTalentsList() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-row lg:flex-col gap-2 lg:items-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleToggleBookings(talent.id, talent.isAcceptingBookings)}
-                    className={`flex items-center gap-2 ${
-                      talent.isAcceptingBookings
-                        ? 'border-green-500/50 text-green-400 hover:bg-green-500/10'
-                        : 'border-red-500/50 text-red-400 hover:bg-red-500/10'
-                    }`}
-                  >
-                    {talent.isAcceptingBookings ? (
-                      <>
-                        <ToggleRight className="w-4 h-4" />
-                        Pause
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="w-4 h-4" />
-                        Activate
-                      </>
-                    )}
-                  </Button>
+                <div className="flex flex-row lg:flex-col gap-3 lg:items-end">
+                  {/* Toggle Switch */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-400 whitespace-nowrap">
+                      Accepting Bookings
+                    </span>
+                    <button
+                      onClick={() => handleToggleBookings(talent.id, talent.isAcceptingBookings)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-neutral-900 ${
+                        talent.isAcceptingBookings
+                          ? 'bg-green-500'
+                          : 'bg-gray-600'
+                      }`}
+                      role="switch"
+                      aria-checked={talent.isAcceptingBookings}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          talent.isAcceptingBookings ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
                   <Button size="sm" variant="outline">
                     <Eye className="w-4 h-4 mr-1" />
                     Details

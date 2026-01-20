@@ -42,6 +42,8 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useAdminDashboard } from '@/lib/hooks/useAdminDashboard';
 import { ActiveTalentsList } from '@/components/admin/ActiveTalentsList';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { useToast } from '@/components/ui/Toast';
 
 // Mock flagged content (this will be implemented later)
 const mockFlaggedContent = [
@@ -74,6 +76,21 @@ function AdminPanelContent() {
   const [showActiveTalents, setShowActiveTalents] = useState(true);
   const [showRejectedTalents, setShowRejectedTalents] = useState(false);
   const { user, profile } = useAuth();
+  const { success, error: showError } = useToast();
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+    variant?: 'danger' | 'warning' | 'success'
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   // Get real data from backend
   const {
@@ -97,17 +114,21 @@ function AdminPanelContent() {
     const talent = pendingTalents.find(t => t.id === talentId);
     if (!talent) return;
 
-    if (!confirm(`Approve ${talent.name} as a talent on the platform?`)) {
-      return;
-    }
-
-    try {
-      await approveTalent(talentId);
-      alert(`✅ ${talent.name} has been approved and can now accept bookings!`);
-    } catch (err) {
-      console.error('Failed to approve talent:', err);
-      alert('❌ Failed to approve talent. Please try again.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Approve Talent',
+      message: `Are you sure you want to approve ${talent.name} as a talent on the platform? They will be able to accept bookings immediately.`,
+      variant: 'success',
+      onConfirm: async () => {
+        try {
+          await approveTalent(talentId);
+          success(`${talent.name} has been approved and can now accept bookings!`);
+        } catch (err) {
+          console.error('Failed to approve talent:', err);
+          showError('Failed to approve talent. Please try again.');
+        }
+      }
+    });
   };
 
   // Handle reject talent
@@ -115,17 +136,21 @@ function AdminPanelContent() {
     const talent = pendingTalents.find(t => t.id === talentId);
     if (!talent) return;
 
-    if (!confirm(`Reject ${talent.name}'s application?`)) {
-      return;
-    }
-
-    try {
-      await rejectTalent(talentId);
-      alert(`${talent.name}'s application has been rejected.`);
-    } catch (err) {
-      console.error('Failed to reject talent:', err);
-      alert('❌ Failed to reject talent. Please try again.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Reject Application',
+      message: `Are you sure you want to reject ${talent.name}'s application? They will not be able to accept bookings and will be moved to the rejected list.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await rejectTalent(talentId);
+          success(`${talent.name}'s application has been rejected.`);
+        } catch (err) {
+          console.error('Failed to reject talent:', err);
+          showError('Failed to reject talent. Please try again.');
+        }
+      }
+    });
   };
 
   // Handle re-approve talent
@@ -133,17 +158,21 @@ function AdminPanelContent() {
     const talent = rejectedTalents.find(t => t.id === talentId);
     if (!talent) return;
 
-    if (!confirm(`Re-approve ${talent.name} and allow them to accept bookings?`)) {
-      return;
-    }
-
-    try {
-      await reapproveTalent(talentId);
-      alert(`✅ ${talent.name} has been re-approved and can now accept bookings!`);
-    } catch (err) {
-      console.error('Failed to re-approve talent:', err);
-      alert('❌ Failed to re-approve talent. Please try again.');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Re-Approve Talent',
+      message: `Re-approve ${talent.name} and allow them to accept bookings? They will be moved back to the active talents list.`,
+      variant: 'success',
+      onConfirm: async () => {
+        try {
+          await reapproveTalent(talentId);
+          success(`${talent.name} has been re-approved and can now accept bookings!`);
+        } catch (err) {
+          console.error('Failed to re-approve talent:', err);
+          showError('Failed to re-approve talent. Please try again.');
+        }
+      }
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -841,6 +870,18 @@ function AdminPanelContent() {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+        confirmText="Confirm"
+        cancelText="Cancel"
+      />
 
       <Footer />
     </div>
