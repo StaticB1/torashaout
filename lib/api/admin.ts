@@ -55,8 +55,9 @@ export async function getPlatformStats() {
     .select('amount_paid, platform_fee')
     .eq('status', 'completed')
 
-  const totalRevenue = revenueData?.reduce((sum, b) => sum + parseFloat(b.amount_paid as any), 0) || 0
-  const platformRevenue = revenueData?.reduce((sum, b) => sum + parseFloat(b.platform_fee as any), 0) || 0
+  const revenue = (revenueData as any[]) || []
+  const totalRevenue = revenue.reduce((sum, b) => sum + parseFloat(b.amount_paid as any), 0)
+  const platformRevenue = revenue.reduce((sum, b) => sum + parseFloat(b.platform_fee as any), 0)
 
   return {
     totalUsers: totalUsers || 0,
@@ -222,7 +223,8 @@ export async function getRevenueAnalytics(months: number = 6) {
   // Group by month
   const monthlyData: Record<string, { revenue: number; bookings: number }> = {}
 
-  data?.forEach(booking => {
+  const bookings = (data as any[]) || []
+  bookings.forEach(booking => {
     const month = new Date(booking.created_at).toISOString().slice(0, 7) // YYYY-MM
     if (!monthlyData[month]) {
       monthlyData[month] = { revenue: 0, bookings: 0 }
