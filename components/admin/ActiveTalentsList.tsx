@@ -217,7 +217,11 @@ export function ActiveTalentsList() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleToggleBookings(talent.id, talent.isAcceptingBookings)}
-                    className="flex items-center gap-2"
+                    className={`flex items-center gap-2 ${
+                      talent.isAcceptingBookings
+                        ? 'border-green-500/50 text-green-400 hover:bg-green-500/10'
+                        : 'border-red-500/50 text-red-400 hover:bg-red-500/10'
+                    }`}
                   >
                     {talent.isAcceptingBookings ? (
                       <>
