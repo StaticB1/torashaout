@@ -79,15 +79,15 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
   };
 
   return (
-    <nav className="fixed top-0 w-full bg-black/90 backdrop-blur-lg border-b border-purple-900/30 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <nav className="fixed top-0 left-0 right-0 w-full bg-black/90 backdrop-blur-lg border-b border-purple-900/30 z-50">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 w-full">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center font-bold text-xl">
+          <Link href="/" className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center font-bold text-base sm:text-xl">
               TS
             </div>
-            <span className="text-xl font-bold text-gradient-brand">ToraShaout</span>
+            <span className="text-base sm:text-xl font-bold text-gradient-brand whitespace-nowrap">ToraShaout</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -200,7 +200,11 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
           </div>
 
           {/* Mobile menu button */}
-          <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button
+            className="md:hidden p-2 -mr-2 flex-shrink-0"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
