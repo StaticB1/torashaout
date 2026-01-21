@@ -193,73 +193,69 @@ export function ActiveTalentsList() {
           <p className="text-neutral-400">No active talents found</p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="space-y-4">
           {talents.map((talent) => (
-            <div key={talent.id} className="bg-neutral-900 rounded-xl p-6 hover:bg-neutral-800/50 transition">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                {/* Talent Info */}
-                <div className="flex items-start gap-4 flex-1">
-                  {/* Avatar */}
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0">
-                    {talent.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-bold truncate">{talent.name}</h3>
-                      <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
-                        {formatCategory(talent.category)}
-                      </span>
-                      {talent.isAcceptingBookings ? (
-                        <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          Active
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          Paused
-                        </span>
-                      )}
+            <div key={talent.id} className="bg-neutral-900 rounded-xl p-6">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-lg font-bold">
+                      {talent.name.split(' ').map(n => n[0]).join('')}
                     </div>
-
-                    <p className="text-sm text-neutral-400 mb-3 line-clamp-1">
-                      {talent.bio || 'No bio available'}
-                    </p>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div className="flex items-center gap-2 text-neutral-400">
-                        <Video className="w-4 h-4" />
-                        <span>{talent.totalBookings} bookings</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold truncate">{talent.name}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm text-neutral-400">{formatCategory(talent.category)}</p>
+                        {talent.isAcceptingBookings ? (
+                          <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Active
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center gap-1">
+                            <XCircle className="w-3 h-3" />
+                            Paused
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 text-neutral-400">
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div>
+                      <p className="text-xs text-neutral-500 mb-1">Bookings</p>
+                      <div className="flex items-center gap-1.5">
+                        <Video className="w-4 h-4 text-neutral-400" />
+                        <p className="text-sm">{talent.totalBookings}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-500 mb-1">Rating</p>
+                      <div className="flex items-center gap-1.5">
                         <Star className="w-4 h-4 text-yellow-400" />
-                        <span>
+                        <p className="text-sm">
                           {talent.averageRating !== null
                             ? `${talent.averageRating.toFixed(1)} (${talent.ratingCount || 0})`
                             : 'No ratings'}
-                        </span>
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2 text-neutral-400">
-                        <DollarSign className="w-4 h-4" />
-                        <span>${talent.priceUsd}/video</span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-500 mb-1">Price</p>
+                      <div className="flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4 text-neutral-400" />
+                        <p className="text-sm">${talent.priceUsd}/video</p>
                       </div>
-                      <div className="flex items-center gap-2 text-neutral-400">
-                        <Clock className="w-4 h-4" />
-                        <span>{talent.responseTime}h response</span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-neutral-500 mb-1">Response</p>
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-neutral-400" />
+                        <p className="text-sm">{talent.responseTime}h</p>
                       </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-row lg:flex-col gap-3 lg:items-end">
-                  {/* Toggle Switch */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-neutral-400 whitespace-nowrap">
-                      Accepting Bookings
-                    </span>
+                    <span className="text-sm text-neutral-400">Accepting Bookings:</span>
                     <button
                       onClick={() => handleToggleBookings(talent.id, talent.isAcceptingBookings)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-neutral-900 ${
@@ -277,13 +273,15 @@ export function ActiveTalentsList() {
                       />
                     </button>
                   </div>
+                </div>
+                <div className="flex flex-col gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setSelectedTalent(talent)}
                   >
                     <Eye className="w-4 h-4 mr-1" />
-                    Details
+                    View Details
                   </Button>
                 </div>
               </div>

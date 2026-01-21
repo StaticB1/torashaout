@@ -54,7 +54,7 @@ function AdminPanelContent() {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [showPendingTalents, setShowPendingTalents] = useState(true);
-  const [showActiveTalents, setShowActiveTalents] = useState(true);
+  const [showActiveTalents, setShowActiveTalents] = useState(false);
   const [showRejectedTalents, setShowRejectedTalents] = useState(false);
   const { user, profile } = useAuth();
   const { success, error: showError } = useToast();

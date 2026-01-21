@@ -51,17 +51,17 @@ export function ActiveTalentDetailsModal({
     .join(' ')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-neutral-900 rounded-xl border border-neutral-800 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-scale-in">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-neutral-900 rounded-xl border border-neutral-800 shadow-2xl max-w-3xl w-full my-2 sm:my-4 animate-scale-in flex flex-col max-h-[96vh] sm:max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-neutral-800 bg-gradient-to-r from-green-900/20 to-blue-900/20">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-600 to-blue-600 rounded-full flex items-center justify-center text-2xl font-bold">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-neutral-800 bg-gradient-to-r from-green-900/20 to-blue-900/20 flex-shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-600 to-blue-600 rounded-full flex items-center justify-center text-lg sm:text-2xl font-bold flex-shrink-0">
               {talent.name.split(' ').map(n => n[0]).join('')}
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">{talent.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-2xl font-bold text-white truncate">{talent.name}</h2>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-xs rounded-full">
                   {categoryDisplay}
                 </span>
@@ -73,12 +73,14 @@ export function ActiveTalentDetailsModal({
                   {talent.isAcceptingBookings ? (
                     <>
                       <ToggleRight className="w-3 h-3" />
-                      Accepting Bookings
+                      <span className="hidden sm:inline">Accepting Bookings</span>
+                      <span className="sm:hidden">Active</span>
                     </>
                   ) : (
                     <>
                       <ToggleLeft className="w-3 h-3" />
-                      Not Accepting
+                      <span className="hidden sm:inline">Not Accepting</span>
+                      <span className="sm:hidden">Paused</span>
                     </>
                   )}
                 </span>
@@ -87,135 +89,92 @@ export function ActiveTalentDetailsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-neutral-800 rounded-lg transition-colors flex-shrink-0"
             aria-label="Close"
           >
-            <X className="w-6 h-6 text-neutral-400" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          <div className="space-y-6">
+        <div className="p-3 sm:p-4 overflow-y-auto flex-1">
+          <div className="space-y-3">
             {/* Performance Stats */}
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border border-yellow-700/30 rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <Star className="w-5 h-5 text-yellow-400" />
-                  <span className="text-xs text-neutral-400">Average Rating</span>
-                </div>
-                <p className="text-2xl font-bold text-yellow-400">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border border-yellow-700/30 rounded-lg p-2">
+                <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 mb-1" />
+                <p className="text-base sm:text-lg font-bold text-yellow-400">
                   {talent.averageRating !== null ? talent.averageRating.toFixed(1) : 'N/A'}
                 </p>
-                {talent.ratingCount !== undefined && talent.ratingCount > 0 && (
-                  <p className="text-xs text-neutral-500 mt-1">
-                    from {talent.ratingCount} {talent.ratingCount === 1 ? 'review' : 'reviews'}
-                  </p>
-                )}
+                <p className="text-xs text-neutral-500">{talent.ratingCount || 0} reviews</p>
               </div>
-              <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 border border-blue-700/30 rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <Video className="w-5 h-5 text-blue-400" />
-                  <span className="text-xs text-neutral-400">Total Bookings</span>
-                </div>
-                <p className="text-2xl font-bold text-blue-400">{talent.totalBookings}</p>
+              <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 border border-blue-700/30 rounded-lg p-2">
+                <Video className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400 mb-1" />
+                <p className="text-base sm:text-lg font-bold text-blue-400">{talent.totalBookings}</p>
+                <p className="text-xs text-neutral-500">bookings</p>
               </div>
-              <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-700/30 rounded-lg p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <Clock className="w-5 h-5 text-purple-400" />
-                  <span className="text-xs text-neutral-400">Response Time</span>
-                </div>
-                <p className="text-2xl font-bold text-purple-400">{talent.responseTime}h</p>
+              <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-700/30 rounded-lg p-2">
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400 mb-1" />
+                <p className="text-base sm:text-lg font-bold text-purple-400">{talent.responseTime}h</p>
+                <p className="text-xs text-neutral-500">response</p>
               </div>
             </div>
 
-            {/* Contact Information */}
-            <div className="bg-neutral-800/50 rounded-lg p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-purple-400" />
-                Contact Information
-              </h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-neutral-400 mb-1">Email Address</p>
-                    <p className="text-sm font-medium truncate">{talent.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-5 h-5 text-green-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-neutral-400 mb-1">Phone Number</p>
-                    <p className="text-sm font-medium">{talent.phone || 'Not provided'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Bio */}
-            <div className="bg-neutral-800/50 rounded-lg p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-purple-400" />
-                Biography
-              </h3>
-              <p className="text-neutral-300 leading-relaxed whitespace-pre-wrap">
-                {talent.bio || 'No biography provided.'}
-              </p>
-            </div>
-
-            {/* Pricing */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-neutral-800/50 rounded-lg p-6">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-green-400" />
-                  Pricing
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-400 text-sm">USD Price</span>
-                    <span className="text-xl font-bold text-green-400">${talent.priceUsd}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-400 text-sm">ZIG Price</span>
-                    <span className="text-xl font-bold text-blue-400">{talent.priceZig} ZIG</span>
-                  </div>
-                  <p className="text-xs text-neutral-500">per video shoutout</p>
-                </div>
-              </div>
-
-              <div className="bg-neutral-800/50 rounded-lg p-6">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Tag className="w-5 h-5 text-pink-400" />
-                  Category
-                </h3>
+            {/* Contact & Bio Combined */}
+            <div className="bg-neutral-800/50 rounded-lg p-3">
+              <div className="grid gap-2 text-xs sm:text-sm mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg font-semibold">
-                    {categoryDisplay}
-                  </span>
+                  <Mail className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                  <p className="truncate">{talent.email}</p>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3 h-3 text-green-400 flex-shrink-0" />
+                  <p>{talent.phone || 'Not provided'}</p>
+                </div>
+              </div>
+              {talent.bio && (
+                <p className="text-xs text-neutral-400 leading-relaxed line-clamp-2 border-t border-neutral-700 pt-2">
+                  {talent.bio}
+                </p>
+              )}
+            </div>
+
+            {/* Pricing, Category & Date Combined */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-neutral-800/50 rounded-lg p-3">
+                <div className="flex items-center gap-1 mb-1">
+                  <DollarSign className="w-3 h-3 text-green-400" />
+                  <h3 className="text-xs font-bold">Pricing</h3>
+                </div>
+                <p className="text-sm font-bold text-green-400">${talent.priceUsd}</p>
+                <p className="text-xs text-blue-400">{talent.priceZig} ZIG</p>
+              </div>
+
+              <div className="bg-neutral-800/50 rounded-lg p-3">
+                <div className="flex items-center gap-1 mb-1">
+                  <Tag className="w-3 h-3 text-pink-400" />
+                  <h3 className="text-xs font-bold">Category</h3>
+                </div>
+                <p className="text-xs text-purple-400 font-semibold line-clamp-2">
+                  {categoryDisplay}
+                </p>
               </div>
             </div>
 
-            {/* Joined Date */}
-            <div className="bg-neutral-800/50 rounded-lg p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-purple-400" />
-                Member Since
-              </h3>
-              <p className="text-neutral-300">{formatDate(talent.joinedAt)}</p>
+            {/* Member Since */}
+            <div className="bg-neutral-800/50 rounded-lg p-2">
+              <p className="text-xs text-neutral-400">
+                <Calendar className="w-3 h-3 inline mr-1" />
+                Joined {new Date(talent.joinedAt).toLocaleDateString()}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between p-6 bg-neutral-800/50 border-t border-neutral-800">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-neutral-400">Booking Status:</span>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 sm:p-6 bg-neutral-800/50 border-t border-neutral-800 flex-shrink-0">
+          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3">
+            <span className="text-xs sm:text-sm text-neutral-400">Booking Status:</span>
             {onToggleBookings && (
               <button
                 onClick={() => onToggleBookings(!talent.isAcceptingBookings)}
@@ -234,13 +193,13 @@ export function ActiveTalentDetailsModal({
                 />
               </button>
             )}
-            <span className={`text-sm font-medium ${
+            <span className={`text-xs sm:text-sm font-medium ${
               talent.isAcceptingBookings ? 'text-green-400' : 'text-gray-400'
             }`}>
               {talent.isAcceptingBookings ? 'Accepting' : 'Not Accepting'}
             </span>
           </div>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} size="sm" className="w-full sm:w-auto">
             Close
           </Button>
         </div>
