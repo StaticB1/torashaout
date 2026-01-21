@@ -200,14 +200,21 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2 -mr-2 flex-shrink-0"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {/* Mobile: Login button + menu button */}
+          <div className="md:hidden flex items-center gap-2">
+            {!loading && !isAuthenticated && (
+              <Link href="/login">
+                <Button size="sm" variant="primary">Login</Button>
+              </Link>
+            )}
+            <button
+              className="p-2 -mr-2 flex-shrink-0"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -284,8 +291,8 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
               </div>
             )}
 
-            {/* Auth Buttons Mobile */}
-            {isAuthenticated ? (
+            {/* Auth Buttons Mobile - only show for authenticated users */}
+            {isAuthenticated && (
               <div className="space-y-2 pt-2">
                 <Link href={getDashboardLink()} onClick={() => setMobileMenuOpen(false)}>
                   <Button className="w-full" variant="outline">
@@ -304,14 +311,6 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
                   <LogOut size={18} className="mr-2" />
                   Sign Out
                 </Button>
-              </div>
-            ) : (
-              <div className="pt-2">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full" variant="primary">
-                    Login / Sign Up
-                  </Button>
-                </Link>
               </div>
             )}
           </div>
