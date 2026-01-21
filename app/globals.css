@@ -39,10 +39,12 @@
   }
 
   /* Prevent specific elements from causing overflow */
-  nav, header, main, section, footer {
+  header, main, section, footer {
     max-width: 100vw;
     overflow-x: hidden;
   }
+
+  /* Don't add overflow constraints to nav - it breaks dropdown z-index stacking */
 }
 
 @layer utilities {

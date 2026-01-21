@@ -146,6 +146,7 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 rounded-full pl-1 pr-3 py-1 hover:border-purple-400 transition"
+                  id="user-menu-button"
                 >
                   {renderAvatar('sm')}
                   <span className="text-sm font-medium">
