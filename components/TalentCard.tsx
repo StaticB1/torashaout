@@ -19,13 +19,26 @@ export function TalentCard({ talent, currency }: TalentCardProps) {
   return (
     <div className="bg-gray-900 border border-purple-700/30 rounded-xl overflow-hidden hover:border-purple-500 transition group cursor-pointer">
       <Link href={`/talent/${talent.id}`}>
-        <div className="relative aspect-square">
-          <Image
-            src={talent.thumbnailUrl || '/images/default-avatar.jpg'}
-            alt={talent.displayName}
-            fill
-            className="object-cover group-hover:scale-105 transition duration-300"
-          />
+        <div className="relative aspect-square bg-gradient-to-br from-purple-600 to-pink-600">
+          {talent.thumbnailUrl ? (
+            <Image
+              src={talent.thumbnailUrl}
+              alt={talent.displayName}
+              fill
+              className="object-cover group-hover:scale-105 transition duration-300"
+            />
+          ) : talent.user?.avatarUrl ? (
+            <Image
+              src={talent.user.avatarUrl}
+              alt={talent.displayName}
+              fill
+              className="object-cover group-hover:scale-105 transition duration-300"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-6xl font-bold text-white">
+              {talent.displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
           
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition">
             <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">

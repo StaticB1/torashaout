@@ -46,15 +46,17 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 relative">
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
-                  <input 
+                  <input
                     type="text"
                     placeholder="Search for your favorite celebrity..."
                     className="w-full bg-gray-900 border border-purple-700/50 rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-purple-500 transition"
                   />
                 </div>
-                <Button>
-                  Browse Talent
-                </Button>
+                <Link href="/browse">
+                  <Button>
+                    Browse Talent
+                  </Button>
+                </Link>
               </div>
 
               {/* Stats */}

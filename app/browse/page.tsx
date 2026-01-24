@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, X } from 'lucide-react'
-import { mockTalentProfiles } from '@/lib/mock-data'
-import { Currency, TalentCategory } from '@/types'
+import { createClient } from '@/lib/supabase/client'
+import { Currency, TalentCategory, TalentProfile } from '@/types'
 import { TalentCard } from '@/components/TalentCard'
 import { AuthNavbar } from '@/components/AuthNavbar'
 import { Footer } from '@/components/Footer'
@@ -32,9 +32,73 @@ export default function BrowsePage() {
   const [selectedCategory, setSelectedCategory] = useState<TalentCategory | 'all'>('all')
   const [sortBy, setSortBy] = useState('popular')
   const [showFilters, setShowFilters] = useState(false)
+  const [talents, setTalents] = useState<TalentProfile[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Load talents from database
+  useEffect(() => {
+    const loadTalents = async () => {
+      setLoading(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('talent_profiles')
+          .select(`
+            *,
+            users:user_id (
+              id,
+              email,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('admin_verified', true)
+          .order('total_bookings', { ascending: false })
+          .order('average_rating', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching talents:', error)
+          setTalents([])
+        } else {
+          // Map database fields to TalentProfile type
+          const mappedTalents: TalentProfile[] = (data || []).map((talent: any) => ({
+            id: talent.id,
+            userId: talent.user_id,
+            displayName: talent.display_name,
+            bio: talent.bio,
+            category: talent.category,
+            priceUSD: talent.price_usd,
+            priceZIG: talent.price_zig,
+            thumbnailUrl: talent.thumbnail_url,
+            profileVideoUrl: talent.profile_video_url,
+            responseTimeHours: talent.response_time_hours,
+            totalBookings: talent.total_bookings,
+            averageRating: talent.average_rating,
+            isAcceptingBookings: talent.is_accepting_bookings,
+            adminVerified: talent.admin_verified,
+            createdAt: talent.created_at,
+            updatedAt: talent.updated_at,
+            user: talent.users ? {
+              id: talent.users.id,
+              email: talent.users.email,
+              fullName: talent.users.full_name,
+              avatarUrl: talent.users.avatar_url,
+            } : undefined,
+          }))
+          setTalents(mappedTalents)
+        }
+      } catch (error) {
+        console.error('Error loading talents:', error)
+        setTalents([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTalents()
+  }, [])
 
   const filteredAndSortedTalent = useMemo(() => {
-    let filtered = mockTalentProfiles
+    let filtered = talents
 
     // Filter by search query
     if (searchQuery) {
@@ -72,7 +136,7 @@ export default function BrowsePage() {
     })
 
     return sorted
-  }, [searchQuery, selectedCategory, sortBy, currency])
+  }, [talents, searchQuery, selectedCategory, sortBy, currency])
 
   return (
     <div className="min-h-screen bg-black">
@@ -174,7 +238,7 @@ export default function BrowsePage() {
               {/* Stats */}
               <div className="mt-6 pt-6 border-t border-neutral-800">
                 <p className="text-sm text-neutral-400">
-                  Showing {filteredAndSortedTalent.length} of {mockTalentProfiles.length} talents
+                  Showing {filteredAndSortedTalent.length} of {talents.length} talents
                 </p>
               </div>
             </div>
@@ -182,7 +246,21 @@ export default function BrowsePage() {
 
           {/* Talent Grid */}
           <div className="flex-1">
-            {filteredAndSortedTalent.length > 0 ? (
+            {loading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-neutral-900 rounded-xl overflow-hidden animate-pulse">
+                    <div className="w-full h-64 bg-neutral-800"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-6 bg-neutral-800 rounded w-3/4"></div>
+                      <div className="h-4 bg-neutral-800 rounded w-1/2"></div>
+                      <div className="h-4 bg-neutral-800 rounded w-full"></div>
+                      <div className="h-4 bg-neutral-800 rounded w-5/6"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredAndSortedTalent.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredAndSortedTalent.map((talent) => (
                   <TalentCard key={talent.id} talent={talent} currency={currency} />

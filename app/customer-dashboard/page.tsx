@@ -38,6 +38,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useCustomerDashboard, CustomerBooking, FavoriteTalent } from '@/lib/hooks/useCustomerDashboard';
 import { getUnreadCount } from '@/lib/api/notifications.client';
 import { useToast } from '@/components/ui/Toast';
+import { getMyTalentApplication, TalentApplication } from '@/lib/api/talent-applications';
 
 type TabType = 'overview' | 'bookings' | 'favorites' | 'settings';
 
@@ -46,6 +47,8 @@ function CustomerDashboardContent() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [filterStatus, setFilterStatus] = useState<'all' | BookingStatus>('all');
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [myApplication, setMyApplication] = useState<TalentApplication | null>(null);
+  const [loadingApplication, setLoadingApplication] = useState(true);
 
   const { user, profile } = useAuth();
   const {
@@ -73,6 +76,26 @@ function CustomerDashboardContent() {
     if (user) {
       loadNotifications();
     }
+  }, [user]);
+
+  // Load customer's talent application
+  useEffect(() => {
+    const loadApplication = async () => {
+      if (user) {
+        setLoadingApplication(true);
+        try {
+          const result = await getMyTalentApplication();
+          if (result.success) {
+            setMyApplication(result.data || null);
+          }
+        } catch (err) {
+          console.error('Error loading application:', err);
+        } finally {
+          setLoadingApplication(false);
+        }
+      }
+    };
+    loadApplication();
   }, [user]);
 
   const getInitials = (name: string | null | undefined) => {
@@ -251,6 +274,131 @@ function CustomerDashboardContent() {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
+            {/* Talent Application Status */}
+            {myApplication ? (
+              <div
+                className={`border rounded-xl p-6 ${
+                  myApplication.status === 'pending'
+                    ? 'bg-yellow-900/20 border-yellow-700/50'
+                    : myApplication.status === 'under_review'
+                    ? 'bg-blue-900/20 border-blue-700/50'
+                    : myApplication.status === 'approved'
+                    ? 'bg-green-900/20 border-green-700/50'
+                    : myApplication.status === 'rejected'
+                    ? 'bg-red-900/20 border-red-700/50'
+                    : 'bg-neutral-900/50 border-neutral-700/50'
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      myApplication.status === 'pending'
+                        ? 'bg-yellow-500/20 text-yellow-400'
+                        : myApplication.status === 'under_review'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : myApplication.status === 'approved'
+                        ? 'bg-green-500/20 text-green-400'
+                        : myApplication.status === 'rejected'
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'bg-neutral-500/20 text-neutral-400'
+                    }`}
+                  >
+                    {myApplication.status === 'pending' && <Clock className="w-6 h-6" />}
+                    {myApplication.status === 'under_review' && <AlertCircle className="w-6 h-6" />}
+                    {myApplication.status === 'approved' && <CheckCircle className="w-6 h-6" />}
+                    {myApplication.status === 'rejected' && <XCircle className="w-6 h-6" />}
+                    {!['pending', 'under_review', 'approved', 'rejected'].includes(myApplication.status) && (
+                      <AlertCircle className="w-6 h-6" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold mb-2">
+                      {myApplication.status === 'pending' && 'Talent Application Pending'}
+                      {myApplication.status === 'under_review' && 'Application Under Review'}
+                      {myApplication.status === 'approved' && 'Talent Application Approved!'}
+                      {myApplication.status === 'rejected' && 'Application Needs Updates'}
+                    </h3>
+                    <p className="text-neutral-300 mb-4">
+                      {myApplication.status === 'pending' &&
+                        'We will review your application and get back to you within 5-7 business days.'}
+                      {myApplication.status === 'under_review' &&
+                        'Our team is currently reviewing your application. Thank you for your patience!'}
+                      {myApplication.status === 'approved' &&
+                        'Congratulations! Your application has been approved. Refresh the page to access your talent dashboard.'}
+                      {myApplication.status === 'rejected' &&
+                        'Please review the feedback below and update your application to resubmit.'}
+                    </p>
+                    <div className="flex flex-wrap gap-4 text-sm mb-3">
+                      <div>
+                        <span className="text-neutral-400">Submitted:</span>
+                        <span className="ml-2 font-medium">
+                          {new Date(myApplication.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {myApplication.reviewed_at && (
+                        <div>
+                          <span className="text-neutral-400">Last Updated:</span>
+                          <span className="ml-2 font-medium">
+                            {new Date(myApplication.updated_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-neutral-400">Stage Name:</span>
+                        <span className="ml-2 font-medium">{myApplication.stage_name}</span>
+                      </div>
+                    </div>
+                    {myApplication.status === 'rejected' && myApplication.admin_notes && (
+                      <div className="bg-black/30 rounded-lg p-4 mb-3">
+                        <p className="text-sm font-semibold mb-1 text-red-300">Feedback from our team:</p>
+                        <p className="text-sm text-neutral-300">{myApplication.admin_notes}</p>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      {myApplication.status === 'rejected' && (
+                        <Link href="/join">
+                          <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                            <ChevronRight className="w-4 h-4 mr-1" />
+                            Update & Resubmit
+                          </Button>
+                        </Link>
+                      )}
+                      {myApplication.status === 'approved' && (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => window.location.reload()}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Access Talent Dashboard
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : !loadingApplication ? (
+              <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400">
+                    <Star className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold mb-2">Become a Talent on Torashout</h3>
+                    <p className="text-neutral-300 mb-4">
+                      Join our platform and start earning by creating personalized video messages for your fans!
+                    </p>
+                    <Link href="/join">
+                      <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                        <Star className="w-4 h-4 mr-1" />
+                        Apply to Become a Talent
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-neutral-900 rounded-xl p-6">
@@ -405,12 +553,10 @@ function CustomerDashboardContent() {
             <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-xl p-6">
               <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
               <div className="grid md:grid-cols-3 gap-4">
-                <Link href="/browse">
-                  <div className="bg-black/30 rounded-lg p-4 hover:bg-black/50 transition cursor-pointer">
-                    <Search className="w-8 h-8 text-purple-400 mb-2" />
-                    <p className="font-semibold">Book a Video</p>
-                    <p className="text-sm text-neutral-400">Find your favorite celebrity</p>
-                  </div>
+                <Link href="/browse" className="bg-black/30 rounded-lg p-4 hover:bg-black/50 transition cursor-pointer block">
+                  <Search className="w-8 h-8 text-purple-400 mb-2" />
+                  <p className="font-semibold">Book a Video</p>
+                  <p className="text-sm text-neutral-400">Find your favorite celebrity</p>
                 </Link>
                 <div className="bg-black/30 rounded-lg p-4 hover:bg-black/50 transition cursor-pointer">
                   <Gift className="w-8 h-8 text-pink-400 mb-2" />

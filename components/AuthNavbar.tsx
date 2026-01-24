@@ -200,11 +200,16 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
             )}
           </div>
 
-          {/* Mobile: Login button + menu button */}
+          {/* Mobile: Avatar/Login button + menu button */}
           <div className="md:hidden flex items-center gap-2">
             {!loading && !isAuthenticated && (
               <Link href="/login">
                 <Button size="sm" variant="primary">Login</Button>
+              </Link>
+            )}
+            {!loading && isAuthenticated && (
+              <Link href={getDashboardLink()} className="flex-shrink-0">
+                {renderAvatar('md')}
               </Link>
             )}
             <button

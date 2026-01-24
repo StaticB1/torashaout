@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import { Star, Clock, CheckCircle, MessageSquare, ArrowLeft, Share2 } from 'lucide-react'
-import { mockTalentProfiles } from '@/lib/mock-data'
+import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatResponseTime } from '@/lib/utils'
-import { Currency } from '@/types'
+import { Currency, TalentProfile } from '@/types'
 import { Button } from '@/components/ui/Button'
 
 export default function TalentProfilePage() {
@@ -14,8 +14,83 @@ export default function TalentProfilePage() {
   const router = useRouter()
   const [currency, setCurrency] = useState<Currency>('USD')
   const [selectedOccasion, setSelectedOccasion] = useState('')
+  const [talent, setTalent] = useState<TalentProfile | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const talent = mockTalentProfiles.find(t => t.id === params.id)
+  useEffect(() => {
+    const loadTalent = async () => {
+      if (!params.id) return
+
+      setLoading(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('talent_profiles')
+          .select(`
+            *,
+            users:user_id (
+              id,
+              email,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('id', params.id)
+          .eq('admin_verified', true)
+          .single()
+
+        if (error || !data) {
+          console.error('Error fetching talent:', error)
+          setTalent(null)
+        } else {
+          // Map database fields to TalentProfile type
+          const mappedTalent: TalentProfile = {
+            id: data.id,
+            userId: data.user_id,
+            displayName: data.display_name,
+            bio: data.bio,
+            category: data.category,
+            priceUSD: data.price_usd,
+            priceZIG: data.price_zig,
+            thumbnailUrl: data.thumbnail_url,
+            profileVideoUrl: data.profile_video_url,
+            responseTimeHours: data.response_time_hours,
+            totalBookings: data.total_bookings,
+            averageRating: data.average_rating,
+            isAcceptingBookings: data.is_accepting_bookings,
+            adminVerified: data.admin_verified,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            user: data.users ? {
+              id: data.users.id,
+              email: data.users.email,
+              fullName: data.users.full_name,
+              avatarUrl: data.users.avatar_url,
+            } : undefined,
+          }
+          setTalent(mappedTalent)
+        }
+      } catch (error) {
+        console.error('Error loading talent:', error)
+        setTalent(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadTalent()
+  }, [params.id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-neutral-400">Loading talent profile...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!talent) {
     return (
@@ -84,13 +159,26 @@ export default function TalentProfilePage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Profile Header */}
             <div className="flex flex-col md:flex-row gap-6">
-              <div className="relative w-full md:w-48 h-64 md:h-48 rounded-xl overflow-hidden">
-                <Image
-                  src={talent.thumbnailUrl}
-                  alt={talent.displayName}
-                  fill
-                  className="object-cover"
-                />
+              <div className="relative w-full md:w-48 h-64 md:h-48 rounded-xl overflow-hidden bg-gradient-to-br from-purple-600 to-pink-600">
+                {talent.thumbnailUrl ? (
+                  <Image
+                    src={talent.thumbnailUrl}
+                    alt={talent.displayName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : talent.user?.avatarUrl ? (
+                  <Image
+                    src={talent.user.avatarUrl}
+                    alt={talent.displayName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-6xl font-bold text-white">
+                    {talent.displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
 
               <div className="flex-1">

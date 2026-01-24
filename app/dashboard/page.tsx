@@ -39,6 +39,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useTalentProfile, BookingRequest } from '@/lib/hooks/useTalentProfile';
 import { getUnreadCount } from '@/lib/api/notifications.client';
 import { useToast } from '@/components/ui/Toast';
+import { getMyTalentApplication, TalentApplication } from '@/lib/api/talent-applications';
 
 type TabType = 'overview' | 'requests' | 'earnings' | 'settings';
 
@@ -55,6 +56,10 @@ function DashboardContent() {
   const [responseTime, setResponseTime] = useState(48);
   const [priceUSD, setPriceUSD] = useState(0);
 
+  // Customer application state
+  const [myApplication, setMyApplication] = useState<TalentApplication | null>(null);
+  const [loadingApplication, setLoadingApplication] = useState(true);
+
   const { user, profile } = useAuth();
   const {
     talentProfile,
@@ -68,6 +73,9 @@ function DashboardContent() {
     toggleAcceptingBookings
   } = useTalentProfile();
   const toast = useToast();
+
+  // Determine if user is a talent or customer
+  const isTalent = profile?.role === 'talent' || profile?.role === 'admin';
 
   // Initialize form state when talentProfile loads
   useEffect(() => {
@@ -94,6 +102,28 @@ function DashboardContent() {
       loadNotifications();
     }
   }, [user]);
+
+  // Load customer's talent application if they're a fan
+  useEffect(() => {
+    const loadApplication = async () => {
+      if (!isTalent && user) {
+        setLoadingApplication(true);
+        try {
+          const result = await getMyTalentApplication();
+          if (result.success) {
+            setMyApplication(result.data || null);
+          }
+        } catch (err) {
+          console.error('Error loading application:', err);
+        } finally {
+          setLoadingApplication(false);
+        }
+      } else {
+        setLoadingApplication(false);
+      }
+    };
+    loadApplication();
+  }, [user, isTalent]);
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
@@ -167,7 +197,7 @@ function DashboardContent() {
   ];
 
   // Show loading state
-  if (loading) {
+  if (loading || (loadingApplication && !isTalent)) {
     return (
       <div className="min-h-screen bg-black text-white">
         <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
@@ -213,6 +243,239 @@ function DashboardContent() {
     .filter(b => b.customer_review)
     .slice(0, 3);
 
+  // Customer Dashboard View (for fans)
+  if (!isTalent) {
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case 'pending':
+          return 'bg-yellow-900/20 border-yellow-700/50 text-yellow-400';
+        case 'under_review':
+          return 'bg-blue-900/20 border-blue-700/50 text-blue-400';
+        case 'approved':
+          return 'bg-green-900/20 border-green-700/50 text-green-400';
+        case 'rejected':
+          return 'bg-red-900/20 border-red-700/50 text-red-400';
+        default:
+          return 'bg-neutral-900/50 border-neutral-700/50 text-neutral-400';
+      }
+    };
+
+    const getStatusIcon = (status: string) => {
+      switch (status) {
+        case 'pending':
+          return <Clock className="w-6 h-6" />;
+        case 'under_review':
+          return <AlertCircle className="w-6 h-6" />;
+        case 'approved':
+          return <CheckCircle className="w-6 h-6" />;
+        case 'rejected':
+          return <XCircle className="w-6 h-6" />;
+        default:
+          return <AlertCircle className="w-6 h-6" />;
+      }
+    };
+
+    const getStatusText = (status: string) => {
+      switch (status) {
+        case 'pending':
+          return 'Your application is pending review';
+        case 'under_review':
+          return 'Your application is under review';
+        case 'approved':
+          return 'Your application has been approved!';
+        case 'rejected':
+          return 'Your application was not approved';
+        case 'onboarding':
+          return 'Your application is being processed';
+        default:
+          return 'Application status unknown';
+      }
+    };
+
+    const getStatusDescription = (status: string) => {
+      switch (status) {
+        case 'pending':
+          return 'We will review your application and get back to you within 5-7 business days.';
+        case 'under_review':
+          return 'Our team is currently reviewing your application. Thank you for your patience!';
+        case 'approved':
+          return 'Congratulations! You can now access your talent dashboard and start receiving booking requests.';
+        case 'rejected':
+          return 'Please review the feedback below and update your application to resubmit.';
+        case 'onboarding':
+          return 'We are setting up your talent profile. This should be completed shortly.';
+        default:
+          return '';
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+
+        <div className="container mx-auto px-4 py-8 pt-24">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div className="flex items-center gap-4 mb-4 md:mb-0">
+              {profile?.avatar_url ? (
+                <Image
+                  src={profile.avatar_url}
+                  alt={profile.full_name || 'User'}
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-2xl font-bold">
+                  {getInitials(profile?.full_name)}
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold">{profile?.full_name || 'Customer Dashboard'}</h1>
+                <p className="text-neutral-400">Your Talent Application</p>
+              </div>
+            </div>
+            <Link href="/notifications" className="relative p-2 bg-neutral-900 rounded-lg hover:bg-neutral-800 transition">
+              <Bell className="w-5 h-5" />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full text-xs flex items-center justify-center">
+                  {unreadNotifications}
+                </span>
+              )}
+            </Link>
+          </div>
+
+          {/* Application Status */}
+          {myApplication ? (
+            <div className="space-y-6">
+              {/* Status Card */}
+              <div className={`border rounded-xl p-6 ${getStatusColor(myApplication.status)}`}>
+                <div className="flex items-start gap-4">
+                  {getStatusIcon(myApplication.status)}
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold mb-2">{getStatusText(myApplication.status)}</h2>
+                    <p className="mb-4">{getStatusDescription(myApplication.status)}</p>
+                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-neutral-400">Submitted:</span>
+                        <span className="ml-2 font-medium">{new Date(myApplication.created_at).toLocaleDateString()}</span>
+                      </div>
+                      {myApplication.reviewed_at && (
+                        <div>
+                          <span className="text-neutral-400">Last Updated:</span>
+                          <span className="ml-2 font-medium">{new Date(myApplication.updated_at).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin Feedback (if rejected) */}
+              {myApplication.status === 'rejected' && myApplication.admin_notes && (
+                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
+                  <h3 className="font-bold mb-3 flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-red-400" />
+                    Feedback from our team
+                  </h3>
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <p className="text-neutral-300">{myApplication.admin_notes}</p>
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/join">
+                      <Button className="w-full md:w-auto">
+                        <ChevronRight className="w-4 h-4 mr-2" />
+                        Update & Resubmit Application
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Application Details */}
+              <div className="bg-neutral-900 rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-6">Application Details</h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-neutral-400 mb-1">Stage Name</p>
+                    <p className="font-medium">{myApplication.stage_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-400 mb-1">Category</p>
+                    <p className="font-medium capitalize">{myApplication.category}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-400 mb-1">Years Active</p>
+                    <p className="font-medium">{myApplication.years_active} years</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-400 mb-1">Proposed Price</p>
+                    <p className="font-medium">${myApplication.proposed_price_usd}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-neutral-400 mb-1">Bio</p>
+                    <p className="text-neutral-300">{myApplication.bio}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-neutral-400 mb-1">Notable Work</p>
+                    <p className="text-neutral-300">{myApplication.notable_work}</p>
+                  </div>
+                  {myApplication.instagram_handle && (
+                    <div>
+                      <p className="text-sm text-neutral-400 mb-1">Instagram</p>
+                      <p className="font-medium">
+                        {myApplication.instagram_handle}
+                        {myApplication.instagram_followers && (
+                          <span className="text-neutral-400 ml-2">({myApplication.instagram_followers.toLocaleString()} followers)</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {myApplication.status === 'approved' && (
+                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-xl p-6 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Welcome to Torashout!</h3>
+                  <p className="text-neutral-300 mb-4">Your talent profile is ready. Start receiving booking requests now!</p>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <ArrowUpRight className="w-4 h-4 mr-2" />
+                    Access Talent Dashboard
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* No Application Yet */
+            <div className="bg-neutral-900 rounded-xl p-12 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Star className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-bold mb-3">Become a Talent on Torashout</h2>
+              <p className="text-neutral-400 mb-6 max-w-md mx-auto">
+                Join our platform and start earning by creating personalized video messages for your fans!
+              </p>
+              <Link href="/join">
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                  <Star className="w-4 h-4 mr-2" />
+                  Apply to Become a Talent
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  // Talent Dashboard View (existing code)
   return (
     <div className="min-h-screen bg-black text-white">
       <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
@@ -780,7 +1043,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <AuthGuard requiredRole="talent">
+    <AuthGuard>
       <DashboardContent />
     </AuthGuard>
   );
