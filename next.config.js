@@ -6,6 +6,18 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'blogger.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'dailynews.co.zw',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.thestandard.co.zw',
+      },
     ],
   },
 }
