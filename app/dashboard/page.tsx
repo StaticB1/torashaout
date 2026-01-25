@@ -37,11 +37,12 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTalentProfile, BookingRequest } from '@/lib/hooks/useTalentProfile';
+import { useCustomerBookings, CustomerBooking } from '@/lib/hooks/useCustomerBookings';
 import { getUnreadCount } from '@/lib/api/notifications.client';
 import { useToast } from '@/components/ui/Toast';
 import { getMyTalentApplication, TalentApplication } from '@/lib/api/talent-applications';
 
-type TabType = 'overview' | 'requests' | 'earnings' | 'settings';
+type TabType = 'overview' | 'requests' | 'my-orders' | 'earnings' | 'settings';
 
 function DashboardContent() {
   const [currency, setCurrency] = useState<Currency>('USD');
@@ -72,10 +73,25 @@ function DashboardContent() {
     updateProfile,
     toggleAcceptingBookings
   } = useTalentProfile();
+  const {
+    bookings: customerBookings,
+    pendingBookings: customerPendingBookings,
+    completedBookings: customerCompletedBookings,
+    loading: loadingCustomerBookings,
+    error: customerBookingsError,
+    refresh: refreshCustomerBookings,
+    stats: customerStats,
+  } = useCustomerBookings();
   const toast = useToast();
 
   // Determine if user is a talent or customer
   const isTalent = profile?.role === 'talent' || profile?.role === 'admin';
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[Dashboard] User role:', profile?.role, 'isTalent:', isTalent);
+    console.log('[Dashboard] Customer bookings:', customerBookings?.length || 0);
+  }, [profile?.role, isTalent, customerBookings]);
 
   // Initialize form state when talentProfile loads
   useEffect(() => {
@@ -192,12 +208,13 @@ function DashboardContent() {
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
     { id: 'requests' as TabType, label: 'Requests', icon: Video, badge: stats?.pendingRequests },
+    { id: 'my-orders' as TabType, label: 'My Orders', icon: Star },
     { id: 'earnings' as TabType, label: 'Earnings', icon: Wallet },
     { id: 'settings' as TabType, label: 'Settings', icon: Settings },
   ];
 
   // Show loading state
-  if (loading || (loadingApplication && !isTalent)) {
+  if (loading || (loadingApplication && !isTalent) || (!isTalent && loadingCustomerBookings)) {
     return (
       <div className="min-h-screen bg-black text-white">
         <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
@@ -245,7 +262,7 @@ function DashboardContent() {
 
   // Customer Dashboard View (for fans)
   if (!isTalent) {
-    const getStatusColor = (status: string) => {
+    const getApplicationStatusColor = (status: string) => {
       switch (status) {
         case 'pending':
           return 'bg-yellow-900/20 border-yellow-700/50 text-yellow-400';
@@ -260,7 +277,7 @@ function DashboardContent() {
       }
     };
 
-    const getStatusIcon = (status: string) => {
+    const getApplicationStatusIcon = (status: string) => {
       switch (status) {
         case 'pending':
           return <Clock className="w-6 h-6" />;
@@ -275,7 +292,7 @@ function DashboardContent() {
       }
     };
 
-    const getStatusText = (status: string) => {
+    const getApplicationStatusText = (status: string) => {
       switch (status) {
         case 'pending':
           return 'Your application is pending review';
@@ -292,21 +309,56 @@ function DashboardContent() {
       }
     };
 
-    const getStatusDescription = (status: string) => {
+    const getBookingStatusColor = (status: string) => {
       switch (status) {
-        case 'pending':
-          return 'We will review your application and get back to you within 5-7 business days.';
-        case 'under_review':
-          return 'Our team is currently reviewing your application. Thank you for your patience!';
-        case 'approved':
-          return 'Congratulations! You can now access your talent dashboard and start receiving booking requests.';
-        case 'rejected':
-          return 'Please review the feedback below and update your application to resubmit.';
-        case 'onboarding':
-          return 'We are setting up your talent profile. This should be completed shortly.';
+        case 'pending_payment':
+          return 'bg-yellow-500/20 text-yellow-400';
+        case 'payment_confirmed':
+          return 'bg-blue-500/20 text-blue-400';
+        case 'in_progress':
+          return 'bg-purple-500/20 text-purple-400';
+        case 'completed':
+        case 'delivered':
+          return 'bg-green-500/20 text-green-400';
+        case 'cancelled':
+        case 'refunded':
+          return 'bg-red-500/20 text-red-400';
         default:
-          return '';
+          return 'bg-neutral-500/20 text-neutral-400';
       }
+    };
+
+    const getBookingStatusText = (status: string) => {
+      switch (status) {
+        case 'pending_payment':
+          return 'Awaiting Payment';
+        case 'payment_confirmed':
+          return 'Confirmed';
+        case 'in_progress':
+          return 'In Progress';
+        case 'completed':
+          return 'Completed';
+        case 'delivered':
+          return 'Delivered';
+        case 'cancelled':
+          return 'Cancelled';
+        case 'refunded':
+          return 'Refunded';
+        default:
+          return status;
+      }
+    };
+
+    const getTimeRemaining = (dueDate: string | null) => {
+      if (!dueDate) return null;
+      const now = new Date();
+      const due = new Date(dueDate);
+      const diff = due.getTime() - now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      if (hours < 0) return 'Overdue';
+      if (hours < 24) return `${hours}h remaining`;
+      const days = Math.floor(hours / 24);
+      return `${days}d ${hours % 24}h remaining`;
     };
 
     return (
@@ -331,143 +383,256 @@ function DashboardContent() {
                 </div>
               )}
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">{profile?.full_name || 'Customer Dashboard'}</h1>
-                <p className="text-neutral-400">Your Talent Application</p>
+                <h1 className="text-2xl md:text-3xl font-bold">{profile?.full_name || 'My Dashboard'}</h1>
+                <p className="text-neutral-400">Manage your orders and account</p>
               </div>
             </div>
-            <Link href="/notifications" className="relative p-2 bg-neutral-900 rounded-lg hover:bg-neutral-800 transition">
-              <Bell className="w-5 h-5" />
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full text-xs flex items-center justify-center">
-                  {unreadNotifications}
-                </span>
-              )}
-            </Link>
-          </div>
-
-          {/* Application Status */}
-          {myApplication ? (
-            <div className="space-y-6">
-              {/* Status Card */}
-              <div className={`border rounded-xl p-6 ${getStatusColor(myApplication.status)}`}>
-                <div className="flex items-start gap-4">
-                  {getStatusIcon(myApplication.status)}
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold mb-2">{getStatusText(myApplication.status)}</h2>
-                    <p className="mb-4">{getStatusDescription(myApplication.status)}</p>
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-neutral-400">Submitted:</span>
-                        <span className="ml-2 font-medium">{new Date(myApplication.created_at).toLocaleDateString()}</span>
-                      </div>
-                      {myApplication.reviewed_at && (
-                        <div>
-                          <span className="text-neutral-400">Last Updated:</span>
-                          <span className="ml-2 font-medium">{new Date(myApplication.updated_at).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Admin Feedback (if rejected) */}
-              {myApplication.status === 'rejected' && myApplication.admin_notes && (
-                <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">
-                  <h3 className="font-bold mb-3 flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-red-400" />
-                    Feedback from our team
-                  </h3>
-                  <div className="bg-black/30 rounded-lg p-4">
-                    <p className="text-neutral-300">{myApplication.admin_notes}</p>
-                  </div>
-                  <div className="mt-4">
-                    <Link href="/join">
-                      <Button className="w-full md:w-auto">
-                        <ChevronRight className="w-4 h-4 mr-2" />
-                        Update & Resubmit Application
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {/* Application Details */}
-              <div className="bg-neutral-900 rounded-xl p-6">
-                <h3 className="text-xl font-bold mb-6">Application Details</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-neutral-400 mb-1">Stage Name</p>
-                    <p className="font-medium">{myApplication.stage_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-400 mb-1">Category</p>
-                    <p className="font-medium capitalize">{myApplication.category}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-400 mb-1">Years Active</p>
-                    <p className="font-medium">{myApplication.years_active} years</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-400 mb-1">Proposed Price</p>
-                    <p className="font-medium">${myApplication.proposed_price_usd}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-neutral-400 mb-1">Bio</p>
-                    <p className="text-neutral-300">{myApplication.bio}</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <p className="text-sm text-neutral-400 mb-1">Notable Work</p>
-                    <p className="text-neutral-300">{myApplication.notable_work}</p>
-                  </div>
-                  {myApplication.instagram_handle && (
-                    <div>
-                      <p className="text-sm text-neutral-400 mb-1">Instagram</p>
-                      <p className="font-medium">
-                        {myApplication.instagram_handle}
-                        {myApplication.instagram_followers && (
-                          <span className="text-neutral-400 ml-2">({myApplication.instagram_followers.toLocaleString()} followers)</span>
-                        )}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              {myApplication.status === 'approved' && (
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-xl p-6 text-center">
-                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold mb-2">Welcome to Torashout!</h3>
-                  <p className="text-neutral-300 mb-4">Your talent profile is ready. Start receiving booking requests now!</p>
-                  <Button
-                    onClick={() => window.location.reload()}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    <ArrowUpRight className="w-4 h-4 mr-2" />
-                    Access Talent Dashboard
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* No Application Yet */
-            <div className="bg-neutral-900 rounded-xl p-12 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Star className="w-8 h-8" />
-              </div>
-              <h2 className="text-2xl font-bold mb-3">Become a Talent on Torashout</h2>
-              <p className="text-neutral-400 mb-6 max-w-md mx-auto">
-                Join our platform and start earning by creating personalized video messages for your fans!
-              </p>
-              <Link href="/join">
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+            <div className="flex items-center gap-3">
+              <Link href="/notifications" className="relative p-2 bg-neutral-900 rounded-lg hover:bg-neutral-800 transition">
+                <Bell className="w-5 h-5" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full text-xs flex items-center justify-center">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </Link>
+              <Link href="/browse">
+                <Button size="sm" className="bg-gradient-to-r from-purple-600 to-pink-600">
                   <Star className="w-4 h-4 mr-2" />
-                  Apply to Become a Talent
+                  Book a Talent
                 </Button>
               </Link>
             </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="bg-neutral-900 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                  <Video className="w-5 h-5 text-purple-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{customerStats.totalOrders}</p>
+              <p className="text-sm text-neutral-400">Total Orders</p>
+            </div>
+
+            <div className="bg-neutral-900 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-yellow-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{customerStats.pendingOrders}</p>
+              <p className="text-sm text-neutral-400">Pending</p>
+            </div>
+
+            <div className="bg-neutral-900 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{customerStats.completedOrders}</p>
+              <p className="text-sm text-neutral-400">Completed</p>
+            </div>
+
+            <div className="bg-neutral-900 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-pink-400" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{formatCurrency(customerStats.totalSpent)}</p>
+              <p className="text-sm text-neutral-400">Total Spent</p>
+            </div>
+          </div>
+
+          {/* Active Orders */}
+          <div className="bg-neutral-900 rounded-xl p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">Active Orders</h2>
+              {customerPendingBookings.length > 0 && (
+                <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
+                  {customerPendingBookings.length} in progress
+                </span>
+              )}
+            </div>
+
+            {customerPendingBookings.length === 0 ? (
+              <div className="text-center py-12">
+                <Video className="w-16 h-16 mx-auto mb-4 text-neutral-600" />
+                <h3 className="text-xl font-bold mb-2">No active orders</h3>
+                <p className="text-neutral-400 mb-6">Browse our amazing talent and book your first video!</p>
+                <Link href="/browse">
+                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600">
+                    <Star className="w-4 h-4 mr-2" />
+                    Discover Talent
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {customerPendingBookings.map((booking) => (
+                  <div key={booking.id} className="bg-black/50 rounded-lg p-4">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        {booking.talent?.thumbnail_url ? (
+                          <Image
+                            src={booking.talent.thumbnail_url}
+                            alt={booking.talent.display_name}
+                            width={56}
+                            height={56}
+                            className="w-14 h-14 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center text-xl font-bold">
+                            {booking.talent?.display_name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold">{booking.talent?.display_name || 'Unknown Talent'}</h3>
+                            <span className={`px-2 py-0.5 text-xs rounded-full ${getBookingStatusColor(booking.status)}`}>
+                              {getBookingStatusText(booking.status)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-neutral-400 mb-1">
+                            For: {booking.recipient_name} • {booking.occasion}
+                          </p>
+                          <p className="text-xs text-neutral-500">
+                            Booking #{booking.booking_code}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <p className="font-semibold text-purple-400">
+                          {currency === 'USD' ? `$${booking.amount_paid}` : `ZIG ${booking.amount_paid}`}
+                        </p>
+                        {booking.due_date && (
+                          <p className="text-sm text-neutral-400">
+                            {getTimeRemaining(booking.due_date)}
+                          </p>
+                        )}
+                        <Link href={`/booking/${booking.booking_code}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Order History */}
+          {customerCompletedBookings.length > 0 && (
+            <div className="bg-neutral-900 rounded-xl p-6 mb-8">
+              <h2 className="text-xl font-bold mb-6">Order History</h2>
+              <div className="space-y-4">
+                {customerCompletedBookings.slice(0, 5).map((booking) => (
+                  <div key={booking.id} className="flex items-center justify-between bg-black/50 rounded-lg p-4">
+                    <div className="flex items-center gap-4">
+                      {booking.talent?.thumbnail_url ? (
+                        <Image
+                          src={booking.talent.thumbnail_url}
+                          alt={booking.talent.display_name}
+                          width={48}
+                          height={48}
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center text-lg font-bold">
+                          {booking.talent?.display_name?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-semibold">{booking.talent?.display_name || 'Unknown Talent'}</h3>
+                        <p className="text-sm text-neutral-400">
+                          For: {booking.recipient_name} • {new Date(booking.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${getBookingStatusColor(booking.status)}`}>
+                        {getBookingStatusText(booking.status)}
+                      </span>
+                      {booking.video_url ? (
+                        <Link href={`/booking/${booking.booking_code}`}>
+                          <Button variant="outline" size="sm">
+                            <Play className="w-4 h-4 mr-1" />
+                            Watch
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Link href={`/booking/${booking.booking_code}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
+
+          {/* Talent Application Section */}
+          <div className="bg-neutral-900 rounded-xl p-6">
+            <h2 className="text-xl font-bold mb-6">Become a Talent</h2>
+            {myApplication ? (
+              <div className={`border rounded-xl p-4 ${getApplicationStatusColor(myApplication.status)}`}>
+                <div className="flex items-start gap-4">
+                  {getApplicationStatusIcon(myApplication.status)}
+                  <div className="flex-1">
+                    <h3 className="font-bold mb-1">{getApplicationStatusText(myApplication.status)}</h3>
+                    <p className="text-sm mb-2">
+                      Submitted as &quot;{myApplication.stage_name}&quot; on {new Date(myApplication.created_at).toLocaleDateString()}
+                    </p>
+                    {myApplication.status === 'approved' && (
+                      <Button
+                        onClick={() => window.location.reload()}
+                        size="sm"
+                        className="mt-2 bg-green-600 hover:bg-green-700"
+                      >
+                        <ArrowUpRight className="w-4 h-4 mr-2" />
+                        Access Talent Dashboard
+                      </Button>
+                    )}
+                    {myApplication.status === 'rejected' && (
+                      <Link href="/join">
+                        <Button size="sm" variant="outline" className="mt-2">
+                          <ChevronRight className="w-4 h-4 mr-2" />
+                          Update & Resubmit
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Star className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold mb-2">Share Your Talent</h3>
+                <p className="text-neutral-400 mb-4 max-w-md mx-auto">
+                  Join our platform and start earning by creating personalized video messages for your fans!
+                </p>
+                <Link href="/join">
+                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600">
+                    <Star className="w-4 h-4 mr-2" />
+                    Apply Now
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
         <Footer />
@@ -853,6 +1018,220 @@ function DashboardContent() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* My Orders Tab - Bookings where talent is the customer */}
+        {activeTab === 'my-orders' && (
+          <div className="space-y-6">
+            {/* Stats for My Orders */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-neutral-900 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <Video className="w-5 h-5 text-purple-400" />
+                  </div>
+                </div>
+                <p className="text-2xl font-bold">{customerStats?.totalOrders ?? 0}</p>
+                <p className="text-sm text-neutral-400">Total Orders</p>
+              </div>
+
+              <div className="bg-neutral-900 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-yellow-400" />
+                  </div>
+                </div>
+                <p className="text-2xl font-bold">{customerStats?.pendingOrders ?? 0}</p>
+                <p className="text-sm text-neutral-400">Pending</p>
+              </div>
+
+              <div className="bg-neutral-900 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                  </div>
+                </div>
+                <p className="text-2xl font-bold">{customerStats?.completedOrders ?? 0}</p>
+                <p className="text-sm text-neutral-400">Completed</p>
+              </div>
+
+              <div className="bg-neutral-900 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-pink-400" />
+                  </div>
+                </div>
+                <p className="text-2xl font-bold">{formatCurrency(customerStats?.totalSpent ?? 0)}</p>
+                <p className="text-sm text-neutral-400">Total Spent</p>
+              </div>
+            </div>
+
+            {/* Active Orders */}
+            <div className="bg-neutral-900 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold">Active Orders</h2>
+                {(customerPendingBookings?.length ?? 0) > 0 && (
+                  <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
+                    {customerPendingBookings?.length ?? 0} in progress
+                  </span>
+                )}
+              </div>
+
+              {loadingCustomerBookings ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+                </div>
+              ) : (customerPendingBookings?.length ?? 0) === 0 ? (
+                <div className="text-center py-12">
+                  <Video className="w-16 h-16 mx-auto mb-4 text-neutral-600" />
+                  <h3 className="text-xl font-bold mb-2">No active orders</h3>
+                  <p className="text-neutral-400 mb-6">Book personalized videos from other amazing talents!</p>
+                  <Link href="/browse">
+                    <Button className="bg-gradient-to-r from-purple-600 to-pink-600">
+                      <Star className="w-4 h-4 mr-2" />
+                      Discover Talent
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(customerPendingBookings ?? []).map((booking) => (
+                    <div key={booking.id} className="bg-black/50 rounded-lg p-4">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          {booking.talent?.thumbnail_url ? (
+                            <Image
+                              src={booking.talent.thumbnail_url}
+                              alt={booking.talent.display_name}
+                              width={56}
+                              height={56}
+                              className="w-14 h-14 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center text-xl font-bold">
+                              {booking.talent?.display_name?.charAt(0) || '?'}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold">{booking.talent?.display_name || 'Unknown Talent'}</h3>
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                booking.status === 'pending_payment' ? 'bg-yellow-500/20 text-yellow-400' :
+                                booking.status === 'payment_confirmed' ? 'bg-blue-500/20 text-blue-400' :
+                                booking.status === 'in_progress' ? 'bg-purple-500/20 text-purple-400' :
+                                'bg-neutral-500/20 text-neutral-400'
+                              }`}>
+                                {booking.status === 'pending_payment' ? 'Awaiting Payment' :
+                                 booking.status === 'payment_confirmed' ? 'Confirmed' :
+                                 booking.status === 'in_progress' ? 'In Progress' : booking.status}
+                              </span>
+                            </div>
+                            <p className="text-sm text-neutral-400 mb-1">
+                              For: {booking.recipient_name} • {booking.occasion}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                              Booking #{booking.booking_code}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <p className="font-semibold text-purple-400">
+                            {currency === 'USD' ? `$${booking.amount_paid}` : `ZIG ${booking.amount_paid}`}
+                          </p>
+                          {booking.due_date && (
+                            <p className="text-sm text-neutral-400">
+                              {getTimeRemaining(booking.due_date)}
+                            </p>
+                          )}
+                          <Link href={`/booking/${booking.booking_code}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View Details
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Order History */}
+            {(customerCompletedBookings?.length ?? 0) > 0 && (
+              <div className="bg-neutral-900 rounded-xl p-6">
+                <h2 className="text-xl font-bold mb-6">Order History</h2>
+                <div className="space-y-4">
+                  {(customerCompletedBookings ?? []).slice(0, 5).map((booking) => (
+                    <div key={booking.id} className="flex items-center justify-between bg-black/50 rounded-lg p-4">
+                      <div className="flex items-center gap-4">
+                        {booking.talent?.thumbnail_url ? (
+                          <Image
+                            src={booking.talent.thumbnail_url}
+                            alt={booking.talent.display_name}
+                            width={48}
+                            height={48}
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center text-lg font-bold">
+                            {booking.talent?.display_name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="font-semibold">{booking.talent?.display_name || 'Unknown Talent'}</h3>
+                          <p className="text-sm text-neutral-400">
+                            For: {booking.recipient_name} • {new Date(booking.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          booking.status === 'completed' || booking.status === 'delivered'
+                            ? 'bg-green-500/20 text-green-400'
+                            : booking.status === 'cancelled' || booking.status === 'refunded'
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-neutral-500/20 text-neutral-400'
+                        }`}>
+                          {booking.status === 'completed' ? 'Completed' :
+                           booking.status === 'delivered' ? 'Delivered' :
+                           booking.status === 'cancelled' ? 'Cancelled' :
+                           booking.status === 'refunded' ? 'Refunded' : booking.status}
+                        </span>
+                        {booking.video_url ? (
+                          <Link href={`/booking/${booking.booking_code}`}>
+                            <Button variant="outline" size="sm">
+                              <Play className="w-4 h-4 mr-1" />
+                              Watch
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Link href={`/booking/${booking.booking_code}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CTA to book more */}
+            <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-xl p-6 text-center">
+              <h3 className="text-lg font-bold mb-2">Discover More Talent</h3>
+              <p className="text-neutral-400 mb-4">Book personalized videos from musicians, comedians, athletes, and more!</p>
+              <Link href="/browse">
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600">
+                  <Star className="w-4 h-4 mr-2" />
+                  Browse Talent
+                </Button>
+              </Link>
             </div>
           </div>
         )}
