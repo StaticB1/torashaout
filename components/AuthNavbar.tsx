@@ -183,7 +183,7 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
                             setUserMenuOpen(false);
                             handleSignOut();
                           }}
-                          className="flex items-center space-x-2 px-4 py-2 text-sm text-red-400 hover:bg-gray-800 transition w-full text-left"
+                          className="flex items-center space-x-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/10 transition w-full text-left"
                         >
                           <LogOut size={16} />
                           <span>Sign Out</span>
@@ -208,8 +208,14 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
               </Link>
             )}
             {!loading && isAuthenticated && (
-              <Link href={getDashboardLink()} className="flex-shrink-0">
-                {renderAvatar('md')}
+              <Link
+                href={getDashboardLink()}
+                className="flex items-center space-x-2 bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/50 rounded-full pl-1 pr-3 py-1 hover:border-purple-400 transition flex-shrink-0"
+              >
+                {renderAvatar('sm')}
+                <span className="text-sm font-medium">
+                  {profile?.full_name || user?.email?.split('@')[0]}
+                </span>
               </Link>
             )}
             <button
@@ -306,7 +312,7 @@ export function AuthNavbar({ currency = 'USD', onCurrencyChange }: AuthNavbarPro
                   </Button>
                 </Link>
                 <Button
-                  className="w-full"
+                  className="w-full text-red-400 hover:text-red-300 hover:bg-red-900/10"
                   variant="ghost"
                   onClick={() => {
                     setMobileMenuOpen(false);

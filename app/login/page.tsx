@@ -63,7 +63,7 @@ export default function LoginPage() {
         } else if (userData?.role === 'talent') {
           router.push('/dashboard');
         } else {
-          router.push('/customer-dashboard');
+          router.push('/');
         }
       }
     } catch (err) {

@@ -19,8 +19,8 @@ interface BookingRow {
   booking_code: string;
 }
 
-// Platform fee percentage (10%)
-const PLATFORM_FEE_PERCENT = 0.10;
+// Platform fee percentage (25%)
+const PLATFORM_FEE_PERCENT = 0.25;
 
 // Generate a unique booking code
 function generateBookingCode(): string {
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the booking
+    // Create the booking with pending_payment status
     const bookingData = {
       booking_code: bookingCode,
       customer_id: customerId,
@@ -136,8 +136,8 @@ export async function POST(request: NextRequest) {
       amount_paid: basePrice,
       platform_fee: platformFee,
       talent_earnings: talentEarnings,
-      status: 'payment_confirmed' as BookingStatus, // Simulated - skip pending_payment
-      due_date: dueDate.toISOString(),
+      status: 'pending_payment' as BookingStatus, // Wait for payment
+      due_date: null, // Will be set after payment
     };
 
     const { data: booking, error: bookingError } = await supabase
@@ -154,40 +154,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create simulated payment record
-    const paymentData = {
-      booking_id: booking.id,
-      gateway: body.paymentGateway as PaymentGateway,
-      gateway_transaction_id: `SIM-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      amount: basePrice,
-      currency: currency,
-      status: 'completed', // Simulated payment - always succeeds
-      gateway_response: {
-        simulated: true,
-        message: 'Payment simulated for development',
-        timestamp: new Date().toISOString(),
-        customerName: body.fromName,
-        customerEmail: body.fromEmail,
-      },
-    };
-
-    const { error: paymentError } = await supabase
-      .from('payments')
-      .insert(paymentData as any);
-
-    if (paymentError) {
-      console.error('Error creating payment record:', paymentError);
-      // Don't fail the booking, just log the error
-    }
-
-    // Update talent's total bookings count
-    await (supabase
-      .from('talent_profiles') as any)
-      .update({ total_bookings: (talent.total_bookings || 0) + 1 })
-      .eq('id', talent.id);
-
+    // Return booking details - frontend will redirect to payment page
     return NextResponse.json({
       success: true,
+      requiresPayment: true, // Signal that payment is needed
       booking: {
         id: booking.id,
         bookingCode: booking.booking_code,
@@ -196,7 +166,7 @@ export async function POST(request: NextRequest) {
         occasion: body.occasion,
         amount: basePrice,
         currency: currency,
-        status: 'payment_confirmed',
+        status: 'pending_payment',
         dueDate: dueDate.toISOString(),
         estimatedDelivery: `${talent.response_time_hours} hours`,
       },

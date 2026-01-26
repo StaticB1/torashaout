@@ -11,6 +11,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Real-Time In-System Notifications (2026-01-26)
+- **Notifications Database**
+  - Created `notifications` table with full schema
+  - Row Level Security for user data isolation
+  - Performance indexes for fast queries
+  - Foreign keys to users and bookings
+  - Automatic triggers for booking events
+- **Notifications API**
+  - GET /api/notifications - Fetch with filters (unread, limit)
+  - POST /api/notifications - Create new notification
+  - PATCH /api/notifications/[id] - Mark as read
+  - DELETE /api/notifications/[id] - Delete notification
+  - POST /api/notifications/mark-all-read - Bulk mark as read
+- **NotificationCenter Component**
+  - Real-time updates via Supabase subscriptions
+  - Fetches real data from database (replaced mock data)
+  - Unread count badge with animation
+  - Mark as read on click
+  - Delete notifications
+  - Beautiful UI with type-specific icons and colors
+  - Timestamp formatting (relative: "5m ago", "2h ago")
+  - Empty state when no notifications
+- **Automatic Notifications**
+  - Booking confirmed → Customer notified
+  - New booking request → Talent notified
+  - Video ready → Customer notified
+  - Database triggers handle automation
+  - Zero code needed for new notifications
+- **Real-Time Features**
+  - Supabase subscriptions for instant updates
+  - Notifications appear without refresh
+  - Multi-tab sync (same user, multiple windows)
+  - Optimistic UI updates
+
+#### Complete Payment System with Database Backend (2026-01-26)
+- **Business Logic Updates**
+  - Platform fee updated to 25% (from 10%)
+  - Talent earnings: 75% of booking amount
+  - Applied across all booking endpoints and scripts
+- **Database Schema & Backend**
+  - Created `bookings` table with complete schema (16 fields)
+  - Created `payments` table for transaction tracking
+  - Row Level Security (RLS) policies for data isolation
+  - Performance indexes on key columns
+  - Automatic booking code generation (`BK-YYYYMMDD-XXXX`)
+  - Database trigger for automatic booking status updates
+  - Migration script for easy deployment
+- **Real Backend API Operations**
+  - POST /api/payments with full database integration
+  - GET /api/payments for payment history
+  - User authentication and ownership verification
+  - Duplicate payment prevention
+  - Automatic booking status updates (`payment_confirmed`)
+  - Due date calculation (7 days after payment)
+  - Comprehensive error handling
+
+#### Payment Simulation System (2026-01-26)
+- **Complete Payment Flow Implementation**
+  - Built full payment simulation system while waiting for provider accounts
+  - Three payment methods: Paynow (EcoCash/OneMoney), Stripe (Cards), InnBucks (Wallet)
+  - Ready to swap simulation code with real APIs when accounts are ready
+- **Payment Components**
+  - `PaymentMethodSelector` - Currency-aware payment method selection
+  - `PaynowForm` - EcoCash/OneMoney with phone validation and formatting
+  - `StripeForm` - Card payments with validation (number, expiry, CVV, name)
+  - `InnBucksForm` - Digital wallet with email and phone inputs
+  - `PaymentContainer` - Orchestrates full payment flow
+- **Payment Pages**
+  - `/payment/[bookingId]` - Dedicated payment page with booking summary
+  - `/booking-confirmation` - Success page with animations and details
+- **Payment API**
+  - `/api/payments` - POST for saving payments, GET for fetching details
+  - Database-ready structure (commented out for production)
+  - Authentication checks and error handling
+- **Simulation Features**
+  - Realistic processing delays (2-2.5 seconds)
+  - Variable success rates (90-95% depending on method)
+  - Payment reference generation
+  - Form validation and error messages
+  - Loading states and success animations
+- **Documentation**
+  - `docs/PAYMENT_SIMULATION.md` - Complete integration guide
+  - Step-by-step upgrade path to real payment providers
+  - Environment variable setup
+  - Database schema ready
+  - Testing scenarios included
+
+#### UI/UX Enhancements & Authentication Updates (2026-01-26)
+- **Environment Configuration**
+  - Fixed Supabase environment variables with correct `NEXT_PUBLIC_` prefix
+  - Updated `.env.local` template with proper variable naming
+  - Resolved Supabase client initialization errors
+- **Authentication Flow**
+  - Updated fan/customer login redirect from `/customer-dashboard` to main page `/`
+  - Maintains role-based routing for admin → `/admin` and talent → `/dashboard`
+- **Navigation & Profile UI**
+  - Made sign out buttons red with enhanced hover effects on both desktop and mobile
+  - Added username display next to profile avatar on mobile view
+  - Implemented oval pill design for mobile avatar matching desktop pattern
+  - Red text styling (`text-red-400`, `hover:text-red-300`)
+  - Red background hover effect (`hover:bg-red-900/10`)
+- **Homepage Improvements**
+  - Reduced slideshow transition time from 4 seconds to 2.5 seconds
+  - Improved user engagement with faster content rotation
+
 #### Admin Talent Management Pagination & UI Enhancements (2026-01-20)
 - **Pagination System**
   - Reusable Pagination component with page numbers, navigation, and item counts

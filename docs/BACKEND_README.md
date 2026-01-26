@@ -770,7 +770,7 @@ Creates a new booking with simulated payment processing.
 
 **Features:**
 - Generates unique booking code (format: `TS-{timestamp}-{random}`)
-- Calculates 10% platform fee automatically
+- Calculates 25% platform fee automatically
 - Creates simulated payment record
 - Updates talent's total bookings count
 - Sets due date based on talent's response time

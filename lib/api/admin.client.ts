@@ -29,11 +29,11 @@ export async function getPlatformStats() {
       .eq('admin_verified', true)
       .eq('is_accepting_bookings', true)
 
-    // Get pending verifications
+    // Get pending verifications from talent_applications
     const { count: pendingVerifications } = await supabase
-      .from('talent_profiles')
+      .from('talent_applications')
       .select('*', { count: 'exact', head: true })
-      .eq('admin_verified', false)
+      .in('status', ['pending', 'under_review'])
 
     // Get total bookings
     const { count: totalBookings } = await supabase
@@ -96,7 +96,7 @@ export async function getPlatformStats() {
       monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
       revenueGrowth: Math.round(revenueGrowth * 10) / 10,
       avgBookingValue: Math.round(avgBookingValue * 100) / 100,
-      platformFee: 0.10, // 10% platform fee
+      platformFee: 0.25, // 25% platform fee
       totalPayouts: Math.round(totalPayouts * 100) / 100,
     }
   } catch (error) {
@@ -160,6 +160,7 @@ export async function getRecentBookings(limit: number = 10) {
 
 /**
  * Get pending talent applications with pagination
+ * Now uses talent_applications table instead of talent_profiles
  */
 export async function getPendingTalents(options?: {
   page?: number
@@ -171,45 +172,24 @@ export async function getPendingTalents(options?: {
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  // Get total count
+  // Get total count of pending/under_review applications
   const { count } = await supabase
-    .from('talent_profiles')
+    .from('talent_applications')
     .select('*', { count: 'exact', head: true })
-    .eq('admin_verified', false)
-    .or('verification_status.eq.pending,verification_status.is.null')
+    .in('status', ['pending', 'under_review'])
 
-  // Get talents that are not verified AND not rejected
-  // Query for admin_verified = false AND verification_status = 'pending' (or NULL for backwards compatibility)
+  // Get pending and under_review applications
   let query = supabase
-    .from('talent_profiles')
-    .select(`
-      id,
-      display_name,
-      bio,
-      category,
-      price_usd,
-      price_zig,
-      thumbnail_url,
-      created_at,
-      admin_verified,
-      verification_status,
-      user:user_id (
-        id,
-        email,
-        phone,
-        full_name,
-        created_at
-      )
-    `)
-    .eq('admin_verified', false)
-    .or('verification_status.eq.pending,verification_status.is.null')
+    .from('talent_applications')
+    .select('*')
+    .in('status', ['pending', 'under_review'])
     .order('created_at', { ascending: true })
     .range(from, to)
 
   const { data, error } = await query
 
   if (error) {
-    console.error('Error fetching pending talents:', error)
+    console.error('Error fetching pending talent applications:', error)
     throw error
   }
 
@@ -223,15 +203,15 @@ export async function getPendingTalents(options?: {
     }
   }
 
-  const talents = (data as any[]).map(talent => ({
-    id: talent.id,
-    name: talent.display_name,
-    category: talent.category,
-    email: (talent.user as any)?.email || '',
-    phone: (talent.user as any)?.phone || '',
-    appliedAt: talent.created_at,
-    requestedPrice: talent.price_usd,
-    bio: talent.bio,
+  const talents = (data as any[]).map(app => ({
+    id: app.id,
+    name: app.stage_name,
+    category: app.category,
+    email: app.email,
+    phone: app.phone,
+    appliedAt: app.created_at,
+    requestedPrice: app.proposed_price_usd,
+    bio: app.bio,
   }))
 
   return {
@@ -245,7 +225,7 @@ export async function getPendingTalents(options?: {
 
 /**
  * Get rejected talent applications with pagination
- * Note: This requires the verification_status column migration to be run
+ * Now uses talent_applications table instead of talent_profiles
  */
 export async function getRejectedTalents(options?: {
   page?: number
@@ -258,40 +238,21 @@ export async function getRejectedTalents(options?: {
   const to = from + pageSize - 1
 
   try {
-    // Get total count
+    // Get total count of rejected applications
     const { count } = await supabase
-      .from('talent_profiles')
+      .from('talent_applications')
       .select('*', { count: 'exact', head: true })
-      .eq('verification_status', 'rejected')
+      .eq('status', 'rejected')
 
     const { data, error } = await supabase
-      .from('talent_profiles')
-      .select(`
-        id,
-        display_name,
-        bio,
-        category,
-        price_usd,
-        price_zig,
-        thumbnail_url,
-        created_at,
-        updated_at,
-        verification_status,
-        user:user_id (
-          id,
-          email,
-          phone,
-          full_name,
-          created_at
-        )
-      `)
-      .eq('verification_status', 'rejected')
+      .from('talent_applications')
+      .select('*')
+      .eq('status', 'rejected')
       .order('updated_at', { ascending: false })
       .range(from, to)
 
-    // If error (column doesn't exist), return empty array
     if (error) {
-      console.warn('verification_status column not found, returning empty rejected list:', error.message)
+      console.warn('Error fetching rejected applications:', error.message)
       return {
         data: [],
         total: 0,
@@ -311,16 +272,16 @@ export async function getRejectedTalents(options?: {
       }
     }
 
-    const talents = (data as any[]).map(talent => ({
-      id: talent.id,
-      name: talent.display_name,
-      category: talent.category,
-      email: (talent.user as any)?.email || '',
-      phone: (talent.user as any)?.phone || '',
-      appliedAt: talent.created_at,
-      rejectedAt: talent.updated_at,
-      requestedPrice: talent.price_usd,
-      bio: talent.bio,
+    const talents = (data as any[]).map(app => ({
+      id: app.id,
+      name: app.stage_name,
+      category: app.category,
+      email: app.email,
+      phone: app.phone,
+      appliedAt: app.created_at,
+      rejectedAt: app.updated_at,
+      requestedPrice: app.proposed_price_usd,
+      bio: app.bio,
     }))
 
     return {
@@ -331,7 +292,7 @@ export async function getRejectedTalents(options?: {
       totalPages: Math.ceil((count || 0) / pageSize),
     }
   } catch (err) {
-    console.warn('Error fetching rejected talents, likely column does not exist yet:', err)
+    console.warn('Error fetching rejected talents:', err)
     return {
       data: [],
       total: 0,
@@ -344,68 +305,59 @@ export async function getRejectedTalents(options?: {
 
 /**
  * Approve a talent application
+ * Now uses the talent_applications API which handles profile creation
  */
 export async function approveTalent(talentId: string) {
-  const supabase = createClient()
-
-  // Try with verification_status, but don't fail if column doesn't exist
-  const updateData: any = {
-    admin_verified: true,
-    is_accepting_bookings: true
-  }
-
-  // Try to set verification_status if the column exists
   try {
-    updateData.verification_status = 'approved'
-  } catch (e) {
-    // Column doesn't exist, that's ok
-  }
+    const response = await fetch(`/api/talent-applications/${talentId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'approved'
+      }),
+    })
 
-  const { error } = await supabase
-    .from('talent_profiles')
-    // @ts-ignore - Supabase type inference issue with dynamic updateData
-    .update(updateData)
-    .eq('id', talentId)
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Failed to approve talent')
+    }
 
-  if (error) {
+    return { success: true }
+  } catch (error) {
     console.error('Error approving talent:', error)
     throw error
   }
-
-  return { success: true }
 }
 
 /**
  * Reject a talent application
+ * Now uses the talent_applications API
  */
-export async function rejectTalent(talentId: string) {
-  const supabase = createClient()
-
-  // Try with verification_status, but don't fail if column doesn't exist
-  const updateData: any = {
-    admin_verified: false,
-    is_accepting_bookings: false
-  }
-
-  // Try to set verification_status if the column exists
+export async function rejectTalent(talentId: string, adminNotes?: string) {
   try {
-    updateData.verification_status = 'rejected'
-  } catch (e) {
-    // Column doesn't exist, that's ok
-  }
+    const response = await fetch(`/api/talent-applications/${talentId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'rejected',
+        adminNotes
+      }),
+    })
 
-  const { error } = await supabase
-    .from('talent_profiles')
-    // @ts-ignore - Supabase type inference issue with dynamic updateData
-    .update(updateData)
-    .eq('id', talentId)
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Failed to reject talent')
+    }
 
-  if (error) {
+    return { success: true }
+  } catch (error) {
     console.error('Error rejecting talent:', error)
     throw error
   }
-
-  return { success: true }
 }
 
 /**
@@ -790,26 +742,30 @@ export async function updateTalentVerification(talentId: string, verified: boole
 
 /**
  * Re-approve a rejected talent (move from rejected back to approved)
+ * Now uses the talent_applications API
  */
 export async function reapproveTalent(talentId: string) {
-  const supabase = createClient()
-
-  const { error } = await supabase
-    .from('talent_profiles')
-    // @ts-ignore - Supabase type inference issue
-    .update({
-      admin_verified: true,
-      is_accepting_bookings: true,
-      verification_status: 'approved'
+  try {
+    const response = await fetch(`/api/talent-applications/${talentId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'approved'
+      }),
     })
-    .eq('id', talentId)
 
-  if (error) {
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Failed to re-approve talent')
+    }
+
+    return { success: true }
+  } catch (error) {
     console.error('Error re-approving talent:', error)
     throw error
   }
-
-  return { success: true }
 }
 
 /**
@@ -992,12 +948,11 @@ export async function getAdminNotificationCount() {
   const supabase = createClient()
 
   try {
-    // Count pending talent verifications
+    // Count pending talent applications
     const { count: pendingTalents } = await supabase
-      .from('talent_profiles')
+      .from('talent_applications')
       .select('*', { count: 'exact', head: true })
-      .eq('admin_verified', false)
-      .or('verification_status.eq.pending,verification_status.is.null')
+      .in('status', ['pending', 'under_review'])
 
     // Count pending flagged content
     let pendingFlags = 0

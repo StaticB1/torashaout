@@ -168,12 +168,17 @@ function CheckoutContent() {
         throw new Error(data.error || 'Failed to create booking')
       }
 
-      setShowSuccess(true)
-
-      // Redirect to booking confirmation page
-      setTimeout(() => {
-        router.push(`/booking/${data.booking.bookingCode}`)
-      }, 2000)
+      // Check if payment is required
+      if (data.requiresPayment) {
+        // Redirect to payment page
+        router.push(`/payment/${data.booking.id}`)
+      } else {
+        // Payment already completed (shouldn't happen now)
+        setShowSuccess(true)
+        setTimeout(() => {
+          router.push(`/booking/${data.booking.bookingCode}`)
+        }, 2000)
+      }
     } catch (err: any) {
       console.error('Booking error:', err)
       setError(err.message || 'Something went wrong. Please try again.')
