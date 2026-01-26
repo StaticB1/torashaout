@@ -18,6 +18,22 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'cdn.thestandard.co.zw',
       },
+      {
+        protocol: 'https',
+        hostname: 'nehandaradio.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i0.wp.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.pindula.co.zw',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.zimbabwenow.co.zw',
+      },
     ],
   },
 }

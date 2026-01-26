@@ -8,15 +8,10 @@ import { TalentCard } from '@/components/TalentCard'
 import { AuthNavbar } from '@/components/AuthNavbar'
 import { Footer } from '@/components/Footer'
 
-const categories: { value: TalentCategory | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'musician', label: 'Musicians' },
-  { value: 'comedian', label: 'Comedians' },
-  { value: 'gospel', label: 'Gospel' },
-  { value: 'business', label: 'Business' },
-  { value: 'sports', label: 'Sports' },
-  { value: 'influencer', label: 'Influencers' },
-]
+interface CategoryOption {
+  value: TalentCategory | 'all'
+  label: string
+}
 
 const sortOptions = [
   { value: 'popular', label: 'Most Popular' },
@@ -34,6 +29,7 @@ export default function BrowsePage() {
   const [showFilters, setShowFilters] = useState(false)
   const [talents, setTalents] = useState<TalentProfile[]>([])
   const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState<CategoryOption[]>([{ value: 'all', label: 'All' }])
 
   // Load talents from database
   useEffect(() => {
@@ -95,6 +91,35 @@ export default function BrowsePage() {
       }
     }
     loadTalents()
+  }, [])
+
+  // Load categories from database
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name, slug')
+          .order('name')
+
+        if (error) {
+          console.error('Error fetching categories:', error)
+        } else if (data) {
+          const categoryOptions: CategoryOption[] = [
+            { value: 'all', label: 'All' },
+            ...data.map((cat: { name: string; slug: string }) => ({
+              value: cat.slug as TalentCategory,
+              label: cat.name,
+            }))
+          ]
+          setCategories(categoryOptions)
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error)
+      }
+    }
+    loadCategories()
   }, [])
 
   const filteredAndSortedTalent = useMemo(() => {

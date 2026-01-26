@@ -35,7 +35,16 @@
       "Bash(git restore:*)",
       "Bash(node scripts/seed-talents.mjs:*)",
       "Bash(node scripts/count-talents.mjs:*)",
-      "Bash(node scripts/add-more-rejected.mjs:*)"
+      "Bash(node scripts/add-more-rejected.mjs:*)",
+      "Bash(npx supabase:*)",
+      "Bash(npx supabase migration:*)",
+      "Bash(pgrep:*)",
+      "Bash(npx next dev)",
+      "Bash(npx next dev:*)",
+      "Bash(ss:*)",
+      "Bash(netstat:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node:*)"
     ]
   }
 }

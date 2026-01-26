@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, Play, Zap, ChevronRight, Shield, Clock, TrendingUp, Star } from 'lucide-react';
+import { Search, Play, Zap, ChevronRight, Shield, Clock, TrendingUp, Star, ChevronLeft } from 'lucide-react';
 import { Currency } from '@/types';
 import { mockTalentProfiles, categories } from '@/lib/mock-data';
 import { AuthNavbar } from '@/components/AuthNavbar';
@@ -13,6 +13,28 @@ import { Button } from '@/components/ui/Button';
 
 export default function HomePage() {
   const [currency, setCurrency] = useState<Currency>('USD');
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const slides = [
+    { type: 'video', src: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=600&fit=crop', title: 'See how it works', subtitle: 'Sample Video' },
+    ...mockTalentProfiles.map(talent => ({
+      type: 'talent',
+      src: talent.thumbnailUrl,
+      title: talent.displayName,
+      subtitle: talent.category.charAt(0).toUpperCase() + talent.category.slice(1),
+    })),
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const goToSlide = (index: number) => setCurrentSlide(index);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -76,26 +98,73 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right Content - Featured Video */}
+            {/* Right Content - Slideshow */}
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden border border-purple-700/50">
-                <Image 
-                  src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=600&fit=crop"
-                  alt="Featured video"
-                  width={800}
-                  height={600}
-                  className="w-full h-auto"
-                />
+                {/* Slideshow */}
+                <div className="relative w-full aspect-[4/3]">
+                  {slides.map((slide, index) => (
+                    <div
+                      key={index}
+                      className={`absolute inset-0 transition-opacity duration-700 ${
+                        index === currentSlide ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      <Image
+                        src={slide.src}
+                        alt={slide.title}
+                        fill
+                        className="object-cover"
+                        priority={index === 0}
+                      />
+                    </div>
+                  ))}
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:scale-110 transition shadow-2xl">
-                  <Play size={32} fill="white" />
+
+                {/* Play button only for video slide */}
+                {slides[currentSlide].type === 'video' && (
+                  <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:scale-110 transition shadow-2xl">
+                    <Play size={32} fill="white" />
+                  </button>
+                )}
+
+                {/* Navigation Arrows */}
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition"
+                >
+                  <ChevronLeft size={24} />
                 </button>
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition"
+                >
+                  <ChevronRight size={24} />
+                </button>
+
+                {/* Slide Info */}
                 <div className="absolute bottom-6 left-6 right-6">
-                  <div className="text-sm text-gray-300 mb-1">Sample Video</div>
-                  <div className="text-2xl font-bold">See how it works</div>
+                  <div className="text-sm text-gray-300 mb-1">{slides[currentSlide].subtitle}</div>
+                  <div className="text-2xl font-bold">{slides[currentSlide].title}</div>
+                </div>
+
+                {/* Dots Navigation */}
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {slides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentSlide
+                          ? 'bg-white w-6'
+                          : 'bg-white/40 hover:bg-white/60'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
-              
+
               {/* Floating Badge */}
               <div className="absolute -top-4 -right-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 shadow-2xl">
                 <div className="text-sm text-gray-300">Starting from</div>
@@ -144,6 +213,13 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {mockTalentProfiles.slice(0, 4).map((talent) => (
+              <TalentCard key={talent.id} talent={talent} currency={currency} />
+            ))}
+          </div>
+
+          {/* Second Row of Featured Talent */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+            {mockTalentProfiles.slice(6, 10).map((talent) => (
               <TalentCard key={talent.id} talent={talent} currency={currency} />
             ))}
           </div>
