@@ -34,6 +34,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'www.zimbabwenow.co.zw',
       },
+      {
+        protocol: 'https',
+        hostname: 'startupbiz.co.zw',
+      },
     ],
   },
 }

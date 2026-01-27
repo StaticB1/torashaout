@@ -4,28 +4,77 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Play, Zap, ChevronRight, Shield, Clock, TrendingUp, Star, ChevronLeft } from 'lucide-react';
-import { Currency } from '@/types';
-import { mockTalentProfiles, categories } from '@/lib/mock-data';
+import { Currency, TalentProfile } from '@/types';
+import { categories } from '@/lib/mock-data';
 import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 import { TalentCard } from '@/components/TalentCard';
 import { Button } from '@/components/ui/Button';
+import { createClient } from '@/lib/supabase/client';
 
 export default function HomePage() {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [talents, setTalents] = useState<TalentProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch talents from database
+  useEffect(() => {
+    async function loadTalents() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('talent_profiles')
+          .select('*')
+          .eq('admin_verified', true)
+          .eq('is_accepting_bookings', true)
+          .order('total_bookings', { ascending: false })
+          .order('average_rating', { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+
+        // Transform database response to match TalentProfile type
+        const transformedTalents: TalentProfile[] = (data || []).map((t: any) => ({
+          id: t.id,
+          userId: t.user_id,
+          displayName: t.display_name,
+          bio: t.bio,
+          category: t.category,
+          thumbnailUrl: t.thumbnail_url,
+          profileVideoUrl: t.profile_video_url,
+          priceUSD: t.price_usd,
+          priceZIG: t.price_zig,
+          isAcceptingBookings: t.is_accepting_bookings,
+          responseTimeHours: t.response_time_hours,
+          adminVerified: t.admin_verified,
+          totalBookings: t.total_bookings,
+          averageRating: t.average_rating,
+          createdAt: t.created_at,
+          updatedAt: t.updated_at,
+        }));
+        setTalents(transformedTalents);
+      } catch (error) {
+        console.error('Failed to fetch talents:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTalents();
+  }, []);
 
   const slides = [
     { type: 'video', src: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=600&fit=crop', title: 'See how it works', subtitle: 'Sample Video' },
-    ...mockTalentProfiles.map(talent => ({
+    ...talents.map(talent => ({
       type: 'talent',
-      src: talent.thumbnailUrl,
+      src: talent.thumbnailUrl || '/placeholder-talent.jpg',
       title: talent.displayName,
       subtitle: talent.category.charAt(0).toUpperCase() + talent.category.slice(1),
     })),
   ];
 
   useEffect(() => {
+    if (slides.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 2500);
@@ -41,7 +90,7 @@ export default function HomePage() {
       <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       {/* Hero Section */}
-      <section className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             {/* Left Content */}
@@ -175,30 +224,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-purple-950/20">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">
-            Explore by <span className="text-gradient-brand">Category</span>
-          </h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category, index) => (
-              <button 
-                key={index}
-                className="bg-gray-900 border border-purple-700/30 rounded-xl p-6 hover:border-purple-500 hover:bg-gray-800 transition group"
-              >
-                <div className="text-4xl mb-3">{category.icon}</div>
-                <div className="font-semibold mb-1">{category.name}</div>
-                <div className="text-sm text-gray-500">{category.count} talents</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Featured Talent */}
-      <section id="browse" className="py-20 px-4 sm:px-6 lg:px-8">
+      <section id="browse" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-purple-950/20">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-12">
             <div>
@@ -211,23 +238,57 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockTalentProfiles.slice(0, 4).map((talent) => (
-              <TalentCard key={talent.id} talent={talent} currency={currency} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-gray-900 rounded-xl h-80 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {talents.slice(0, 4).map((talent) => (
+                  <TalentCard key={talent.id} talent={talent} currency={currency} />
+                ))}
+              </div>
 
-          {/* Second Row of Featured Talent */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-            {mockTalentProfiles.slice(6, 10).map((talent) => (
-              <TalentCard key={talent.id} talent={talent} currency={currency} />
-            ))}
-          </div>
+              {/* Second Row of Featured Talent */}
+              {talents.length > 4 && (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+                  {talents.slice(4, 8).map((talent) => (
+                    <TalentCard key={talent.id} talent={talent} currency={currency} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
           <button className="md:hidden w-full mt-8 flex items-center justify-center space-x-2 text-purple-400 border border-purple-700/50 rounded-lg py-3">
             <span>View All Talent</span>
             <ChevronRight size={20} />
           </button>
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-12">
+            Explore by <span className="text-gradient-brand">Category</span>
+          </h2>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categories.map((category, index) => (
+              <button
+                key={index}
+                className="bg-gray-900 border border-purple-700/30 rounded-xl p-6 hover:border-purple-500 hover:bg-gray-800 transition group"
+              >
+                <div className="text-4xl mb-3">{category.icon}</div>
+                <div className="font-semibold mb-1">{category.name}</div>
+                <div className="text-sm text-gray-500">{category.count} talents</div>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -284,23 +345,6 @@ export default function HomePage() {
               <h3 className="text-xl font-bold mb-2">Dual Currency</h3>
               <p className="text-gray-400">Pay in USD or ZIG. Perfect for diaspora and local fans.</p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-2xl p-12">
-            <h2 className="text-4xl font-bold mb-4">Ready to Make Someone&apos;s Day?</h2>
-            <p className="text-xl text-gray-300 mb-8">
-              Over 10,000 videos delivered. Join thousands of happy customers worldwide.
-            </p>
-            <Link href="/browse">
-              <Button size="lg">
-                Browse All Talent
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
@@ -404,7 +448,7 @@ export default function HomePage() {
 
               <div className="mt-8 pt-8 border-t border-purple-700/50">
                 <p className="text-center text-gray-300 mb-4 italic">
-                  "ToraShaout has completely changed how I connect with my fans. I&apos;ve made over $5,000 in just three months!"
+                  &quot;ToraShaout has completely changed how I connect with my fans. I&apos;ve made over $5,000 in just three months!&quot;
                 </p>
                 <div className="text-center">
                   <div className="font-semibold">Winky D</div>
@@ -412,6 +456,23 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-2xl p-12">
+            <h2 className="text-4xl font-bold mb-4">Ready to Make Someone&apos;s Day?</h2>
+            <p className="text-xl text-gray-300 mb-8">
+              Over 10,000 videos delivered. Join thousands of happy customers worldwide.
+            </p>
+            <Link href="/browse">
+              <Button size="lg">
+                Browse All Talent
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

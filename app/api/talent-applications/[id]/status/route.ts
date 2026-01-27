@@ -102,14 +102,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
       // 3. Create talent profile if it doesn't exist
       if (!existingProfile) {
+        // Calculate ZIG price (approximate conversion rate: 1 USD = 50 ZIG)
+        const priceZig = application.proposed_price_usd * 50;
+
         const { error: profileError } = await adminClient.from('talent_profiles').insert({
           user_id: application.user_id,
           display_name: application.stage_name,
           bio: application.bio,
           category: application.category,
           price_usd: application.proposed_price_usd,
+          price_zig: priceZig,
           response_time_hours: application.response_time_hours,
           admin_verified: true,
+          verification_status: 'approved',
           is_accepting_bookings: true,
         });
 

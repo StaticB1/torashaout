@@ -45,8 +45,11 @@
       "Bash(netstat:*)",
       "Bash(npx eslint:*)",
       "Bash(node:*)",
-      "Bash(xargs:*)",
-      "Bash(kill:*)"
+      "WebFetch(domain:unsplash.com)",
+      "Bash(npm run lint:*)",
+      "WebFetch(domain:startupbiz.co.zw)",
+      "Bash(npx next lint:*)",
+      "Bash(git stash:*)"
     ]
   }
 }
