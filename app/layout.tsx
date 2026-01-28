@@ -16,10 +16,30 @@ export const metadata: Metadata = {
   description: 'Book personalized video messages from Zimbabwe\'s biggest celebrities. For birthdays, graduations, or just because.',
   keywords: ['celebrity', 'video', 'messages', 'zimbabwe', 'cameo', 'personalized'],
   authors: [{ name: 'ToraShaout' }],
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://torashaout.com'),
   openGraph: {
     title: 'ToraShaout - Celebrity Video Messages',
-    description: 'Book personalized video messages from Zimbabwe\'s biggest celebrities',
+    description: 'Book personalized video messages from Zimbabwe\'s biggest celebrities. For birthdays, graduations, or just because.',
+    url: 'https://torashaout.com',
+    siteName: 'ToraShaout',
+    locale: 'en_US',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ToraShaout - Celebrity Video Messages',
+    description: 'Book personalized video messages from Zimbabwe\'s biggest celebrities',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
