@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { Providers } from '@/components/Providers';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -52,6 +53,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={inter.className}>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
