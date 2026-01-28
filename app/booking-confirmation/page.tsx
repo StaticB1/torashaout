@@ -8,6 +8,9 @@ import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/Button';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function BookingConfirmationPage() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);

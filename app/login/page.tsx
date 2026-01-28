@@ -10,6 +10,9 @@ import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 import { useToast } from '@/components/ui/Toast';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();

@@ -24,6 +24,7 @@ export async function PATCH(
     }
 
     // Mark as read
+    // @ts-ignore - Temporary workaround for Supabase type inference issue
     const { data, error } = await supabase
       .from('notifications')
       .update({

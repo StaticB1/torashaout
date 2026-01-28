@@ -299,8 +299,10 @@ export interface Database {
           title: string;
           message: string;
           action_url: string | null;
-          is_read: boolean;
+          booking_id: string | null;
+          read: boolean;
           created_at: string;
+          read_at: string | null;
         };
         Insert: {
           id?: string;
@@ -309,8 +311,10 @@ export interface Database {
           title: string;
           message: string;
           action_url?: string | null;
-          is_read?: boolean;
+          booking_id?: string | null;
+          read?: boolean;
           created_at?: string;
+          read_at?: string | null;
         };
         Update: {
           id?: string;
@@ -319,8 +323,10 @@ export interface Database {
           title?: string;
           message?: string;
           action_url?: string | null;
-          is_read?: boolean;
+          booking_id?: string | null;
+          read?: boolean;
           created_at?: string;
+          read_at?: string | null;
         };
       };
       flagged_content: {
