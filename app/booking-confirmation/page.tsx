@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Download, Share2, ArrowRight, Clock, Mail } from 'lucide-react';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-export default function BookingConfirmationPage() {
+function BookingConfirmationContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [bookingDetails, setBookingDetails] = useState<any>(null);
@@ -225,5 +225,20 @@ export default function BookingConfirmationPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function BookingConfirmationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <div className="w-16 h-16 bg-purple-600 rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading booking details...</p>
+        </div>
+      </div>
+    }>
+      <BookingConfirmationContent />
+    </Suspense>
   );
 }
