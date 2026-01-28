@@ -500,8 +500,8 @@ npm install
 
 For questions or issues, contact:
 
-- Email: bsiwonde@gmail.com
-- WhatsApp: +821048370343
+- Email: info@torashaout.com
+- Phone (Calls or WhatsApp): +821048370343
 
 ---
 

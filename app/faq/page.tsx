@@ -177,7 +177,7 @@ export default function FAQPage() {
       id: 'request-refund',
       category: 'refunds',
       question: 'How do I request a refund?',
-      answer: 'Visit your booking page and click the "Request Refund" button, or contact our support team at support@torashaout.com with your booking ID. We\'ll review your request within 24 hours and process approved refunds immediately.'
+      answer: 'Visit your booking page and click the "Request Refund" button, or contact our support team at info@torashaout.com with your booking ID. We\'ll review your request within 24 hours and process approved refunds immediately.'
     },
     {
       id: 'celebrity-decline',

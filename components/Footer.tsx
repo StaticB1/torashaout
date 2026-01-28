@@ -121,7 +121,7 @@ export function Footer() {
               <MessageCircle className="w-5 h-5" />
               <span className="hidden sm:inline">WhatsApp</span>
             </a>
-            <a href="mailto:bsiwonde@gmail.com" className="flex items-center gap-1.5 hover:text-white transition" aria-label="Email">
+            <a href="mailto:info@torashaout.com" className="flex items-center gap-1.5 hover:text-white transition" aria-label="Email">
               <Mail className="w-5 h-5" />
               <span className="hidden sm:inline">Email</span>
             </a>

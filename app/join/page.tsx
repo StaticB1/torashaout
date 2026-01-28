@@ -16,6 +16,7 @@ import {
   Instagram,
   Facebook,
   Youtube,
+  Zap,
 } from 'lucide-react';
 import { Currency } from '@/types';
 import { AuthNavbar } from '@/components/AuthNavbar';
@@ -26,6 +27,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { createClient } from '@/lib/supabase/client';
 import { TalentApplication } from '@/lib/api/talent-applications';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function JoinPage() {
   const [currency, setCurrency] = useState<Currency>('USD');
@@ -297,6 +299,31 @@ export default function JoinPage() {
     <AuthGuard>
       <div className="min-h-screen bg-black text-white">
       <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+
+      {/* Coming Soon Notice Banner */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 border-b-2 border-pink-500 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <div className="flex items-center gap-2">
+              <Zap size={24} className="text-yellow-300 animate-pulse" />
+              <span className="text-lg sm:text-xl font-bold text-white">COMING SOON</span>
+            </div>
+            <div className="text-sm sm:text-base text-white/90">
+              This platform is not yet operational. Applications submitted will be reviewed when we launch.
+              <span className="font-semibold"> Thank you for your interest!</span>
+              <br />
+              <span className="text-xs sm:text-sm mt-2 block">
+                Any talent who does not wish to be listed or have their pictures displayed can contact our admin for immediate removal.
+              </span>
+              <Link href="/contact">
+                <button className="mt-3 px-4 py-2 bg-white text-purple-700 rounded-lg font-semibold text-sm hover:bg-gray-100 transition">
+                  Contact Admin
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}

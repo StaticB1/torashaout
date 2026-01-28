@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Clock, Play } from 'lucide-react';
+import { Star, Clock, Play, Zap } from 'lucide-react';
 import { TalentProfile, Currency } from '@/types';
 import { formatCurrency, formatResponseTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -39,13 +39,22 @@ export function TalentCard({ talent, currency }: TalentCardProps) {
               {talent.displayName.charAt(0).toUpperCase()}
             </div>
           )}
-          
+
+          {/* Coming Soon Overlay */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="text-center">
+              <Zap size={40} className="text-yellow-300 mx-auto mb-2 animate-pulse" />
+              <div className="text-2xl font-bold text-white mb-1">COMING SOON</div>
+              <div className="text-xs text-purple-200">Demo Profile</div>
+            </div>
+          </div>
+
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition">
             <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
               <Play size={20} fill="white" />
             </button>
           </div>
-          
+
           <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-full flex items-center space-x-1">
             <Star size={14} fill="#fbbf24" className="text-yellow-400" />
             <span className="text-sm font-semibold">{talent.averageRating.toFixed(1)}</span>

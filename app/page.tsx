@@ -64,6 +64,7 @@ export default function HomePage() {
   }, []);
 
   const slides = [
+    { type: 'coming-soon', src: '', title: 'COMING SOON', subtitle: 'Launching Soon' },
     { type: 'video', src: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=600&fit=crop', title: 'See how it works', subtitle: 'Sample Video' },
     ...talents.map(talent => ({
       type: 'talent',
@@ -88,6 +89,31 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+
+      {/* Coming Soon Notice Banner */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 border-b-2 border-pink-500 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <div className="flex items-center gap-2">
+              <Zap size={24} className="text-yellow-300 animate-pulse" />
+              <span className="text-lg sm:text-xl font-bold text-white">COMING SOON</span>
+            </div>
+            <div className="text-sm sm:text-base text-white/90">
+              This is a preview website. All profiles and content are for demonstration purposes only.
+              <span className="font-semibold"> No bookings are being accepted at this time.</span>
+              <br />
+              <span className="text-xs sm:text-sm mt-2 block">
+                Any talent who does not wish to be listed or have their pictures displayed can contact our admin for immediate removal.
+              </span>
+              <Link href="/contact">
+                <button className="mt-3 px-4 py-2 bg-white text-purple-700 rounded-lg font-semibold text-sm hover:bg-gray-100 transition">
+                  Contact Admin
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Hero Section */}
       <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
@@ -159,20 +185,44 @@ export default function HomePage() {
                         index === currentSlide ? 'opacity-100' : 'opacity-0'
                       }`}
                     >
-                      <Image
-                        src={slide.src}
-                        alt={slide.title}
-                        fill
-                        className="object-cover"
-                        priority={index === 0}
-                      />
+                      {slide.type === 'coming-soon' ? (
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex items-center justify-center">
+                          <div className="text-center px-6">
+                            <Zap size={80} className="text-yellow-300 mx-auto mb-6 animate-pulse" />
+                            <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
+                              COMING SOON
+                            </h2>
+                            <p className="text-xl text-purple-200">
+                              Zimbabwe's Premier Celebrity Video Platform
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Image
+                            src={slide.src}
+                            alt={slide.title}
+                            fill
+                            className="object-cover"
+                            priority={index === 0}
+                          />
+                          {slide.type === 'talent' && (
+                            <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center">
+                              <div className="text-center">
+                                <Zap size={50} className="text-yellow-300 mx-auto mb-3 animate-pulse" />
+                                <div className="text-3xl font-bold text-white">DEMO PROFILE</div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
 
                 {/* Play button only for video slide */}
-                {slides[currentSlide].type === 'video' && (
+                {slides[currentSlide]?.type === 'video' && (
                   <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:scale-110 transition shadow-2xl">
                     <Play size={32} fill="white" />
                   </button>
@@ -193,10 +243,12 @@ export default function HomePage() {
                 </button>
 
                 {/* Slide Info */}
-                <div className="absolute bottom-6 left-6 right-6">
-                  <div className="text-sm text-gray-300 mb-1">{slides[currentSlide].subtitle}</div>
-                  <div className="text-2xl font-bold">{slides[currentSlide].title}</div>
-                </div>
+                {slides[currentSlide]?.type !== 'coming-soon' && (
+                  <div className="absolute bottom-6 left-6 right-6">
+                    <div className="text-sm text-gray-300 mb-1">{slides[currentSlide].subtitle}</div>
+                    <div className="text-2xl font-bold">{slides[currentSlide].title}</div>
+                  </div>
+                )}
 
                 {/* Dots Navigation */}
                 <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-1.5">

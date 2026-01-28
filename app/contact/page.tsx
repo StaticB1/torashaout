@@ -33,14 +33,14 @@ export default function ContactPage() {
     {
       icon: Mail,
       title: 'Email Us',
-      details: 'support@torashaout.com',
+      details: 'info@torashaout.com',
       description: 'We respond within 24 hours'
     },
     {
       icon: Phone,
-      title: 'Call Us',
-      details: '+263 77 123 4567',
-      description: 'Mon-Fri, 8am-6pm CAT'
+      title: 'Call or WhatsApp',
+      details: '+821048370343',
+      description: 'Available for calls & WhatsApp'
     },
     {
       icon: MapPin,
