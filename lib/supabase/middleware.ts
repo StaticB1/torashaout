@@ -83,7 +83,7 @@ export async function updateSession(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    let redirectPath = '/customer-dashboard'
+    let redirectPath = '/' // Default to homepage for fans
     if (userData?.role === 'admin') {
       redirectPath = '/admin'
     } else if (userData?.role === 'talent') {

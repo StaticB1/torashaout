@@ -66,6 +66,7 @@ function LoginForm() {
         } else if (userData?.role === 'talent') {
           router.push('/dashboard');
         } else {
+          // Fans go to homepage
           router.push('/');
         }
       }

@@ -74,11 +74,34 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       );
     }
 
+    // Use admin client for profile and role updates
+    const adminClient = createAdminClient();
+
+    // If status is 'rejected', deactivate talent profile if it exists
+    if (status === 'rejected' && application.user_id) {
+      // Set talent profile as not verified (but keep the profile)
+      const { error: profileError } = await adminClient
+        .from('talent_profiles')
+        .update({
+          admin_verified: false,
+          is_accepting_bookings: false
+        })
+        .eq('user_id', application.user_id);
+
+      if (profileError) {
+        console.error('Error updating talent profile:', profileError);
+      }
+
+      // Optionally change user role back to 'fan'
+      // Uncomment if you want to change role on rejection:
+      // await adminClient
+      //   .from('users')
+      //   .update({ role: 'fan' })
+      //   .eq('id', application.user_id);
+    }
+
     // If status is 'approved', create talent profile and update user role
     if (status === 'approved' && application.user_id) {
-      // Use admin client to bypass RLS for talent profile creation
-      const adminClient = createAdminClient();
-
       // 1. Update user role to 'talent'
       const { error: roleError } = await adminClient
         .from('users')
@@ -100,7 +123,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         .eq('user_id', application.user_id)
         .single();
 
-      // 3. Create talent profile if it doesn't exist
+      // 3. Create talent profile if it doesn't exist, or re-enable if it was rejected
       if (!existingProfile) {
         // Calculate ZIG price (approximate conversion rate: 1 USD = 50 ZIG)
         const priceZig = application.proposed_price_usd * 50;
@@ -114,7 +137,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           price_zig: priceZig,
           response_time_hours: application.response_time_hours,
           admin_verified: true,
-          verification_status: 'approved',
           is_accepting_bookings: true,
         });
 
@@ -124,6 +146,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
             { success: false, error: 'Failed to create talent profile.' },
             { status: 500 }
           );
+        }
+      } else {
+        // Profile exists (was previously approved), just re-enable it
+        const { error: updateError } = await adminClient
+          .from('talent_profiles')
+          .update({
+            admin_verified: true,
+            is_accepting_bookings: true
+          })
+          .eq('user_id', application.user_id);
+
+        if (updateError) {
+          console.error('Error re-enabling talent profile:', updateError);
         }
       }
     }

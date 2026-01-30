@@ -67,7 +67,7 @@ export default function SignUpPage() {
           if (formData.role === 'talent') {
             router.push('/join'); // Redirect to talent onboarding
           } else {
-            router.push('/browse'); // Redirect to browse page for fans
+            router.push('/'); // Redirect to homepage for fans
           }
         }, 2000);
       }
