@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Heart, Target, Users, Zap, Globe, Shield, Award, TrendingUp, Star, CheckCircle } from 'lucide-react';
 import { Currency } from '@/types';
-import { Navbar } from '@/components/Navbar';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 
 export default function AboutPage() {
@@ -99,7 +99,7 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}

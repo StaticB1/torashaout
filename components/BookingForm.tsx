@@ -90,7 +90,7 @@ export default function BookingForm({ initialOccasion = '', onSubmit, isSubmitti
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form id="booking-form" onSubmit={handleSubmit} className="space-y-6">
       {/* From (Your Info) */}
       <div>
         <label className="block text-sm font-medium mb-2">
@@ -232,15 +232,6 @@ export default function BookingForm({ initialOccasion = '', onSubmit, isSubmitti
           </span>
         </label>
       </div>
-
-      {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-4 rounded-xl hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isSubmitting ? 'Processing...' : 'Continue to Payment'}
-      </button>
 
       <p className="text-center text-sm text-neutral-500">
         You won't be charged until the video is delivered

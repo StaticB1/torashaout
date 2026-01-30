@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Mail, Phone, MapPin, Clock, Send, MessageSquare, HelpCircle, Briefcase, Users } from 'lucide-react'
 import { Currency } from '@/types'
-import { Navbar } from '@/components/Navbar'
+import { AuthNavbar } from '@/components/AuthNavbar'
 import { Footer } from '@/components/Footer'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
@@ -33,14 +33,14 @@ export default function ContactPage() {
     {
       icon: Mail,
       title: 'Email Us',
-      details: 'support@torashaout.com',
+      details: 'info@torashaout.com',
       description: 'We respond within 24 hours'
     },
     {
       icon: Phone,
-      title: 'Call Us',
-      details: '+263 77 123 4567',
-      description: 'Mon-Fri, 8am-6pm CAT'
+      title: 'Call or WhatsApp',
+      details: '+821048370343',
+      description: 'Available for calls & WhatsApp'
     },
     {
       icon: MapPin,
@@ -75,7 +75,7 @@ export default function ContactPage() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-black">
-        <Navbar currency={currency} onCurrencyChange={setCurrency} />
+        <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
         <div className="container mx-auto px-4 py-8 pt-24">
           <div className="max-w-2xl mx-auto text-center py-20">
@@ -106,7 +106,7 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}

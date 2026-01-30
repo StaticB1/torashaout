@@ -38,12 +38,43 @@ cd torashaout-nextjs
 # 2. Install dependencies
 npm install
 
-# 3. Run development server
+# 3. Set up environment variables (copy from .env.example)
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
+
+# 4. Run development server
 npm run dev
 
-# 4. Open browser
+# 5. Open browser
 # Navigate to http://localhost:3000
 ```
+
+---
+
+## 🔐 Authentication & Admin Setup
+
+### Backend Setup
+
+ToraShaout uses **Supabase** for authentication and database. Follow the complete setup guide:
+
+📖 **[Backend Setup Guide](./BACKEND_CHECKLIST.md)**
+
+### Creating Admin Accounts
+
+After setting up Supabase, create an admin account using the provided script:
+
+```bash
+node create-admin-simple.js <email> <password> <full-name>
+```
+
+**Example:**
+```bash
+node create-admin-simple.js admin@example.com securepassword "Admin User"
+```
+
+**Security:** Store admin credentials securely and never commit them to version control.
+
+📖 **[Complete Authentication Guide](./docs/AUTHENTICATION_GUIDE.md)**
 
 ---
 
@@ -95,16 +126,34 @@ torashaout/
 │   ├── BookingForm.tsx          # Reusable booking form
 │   └── NotificationCenter.tsx   # Real-time notification system
 │
-├── lib/                         # Utility functions
+├── lib/                         # Utility functions & API
 │   ├── utils.ts                 # Helper functions (cn, formatCurrency)
-│   └── mock-data.ts             # Mock data for development
+│   ├── mock-data.ts             # Mock data for development
+│   ├── supabase/                # Supabase client utilities
+│   │   ├── client.ts            # Client-side Supabase client
+│   │   ├── server.ts            # Server-side Supabase client
+│   │   └── middleware.ts        # Auth middleware
+│   └── api/                     # API utility functions
+│       ├── talents.ts           # Talent CRUD operations
+│       ├── bookings.ts          # Booking management
+│       ├── users.ts             # User operations
+│       ├── favorites.ts         # Favorites management
+│       ├── notifications.ts     # Notification system
+│       └── admin.ts             # Admin dashboard queries
 │
 ├── types/                       # TypeScript type definitions
-│   └── index.ts                 # All app types (User, Talent, Booking, etc.)
+│   ├── index.ts                 # All app types (User, Talent, Booking, etc.)
+│   └── database.ts              # Supabase database types
+│
+├── docs/                        # Documentation
+│   ├── SUPABASE_SETUP.md        # Complete Supabase setup guide
+│   └── BACKEND_README.md        # Backend architecture & usage
 │
 ├── public/                      # Static assets
 │   └── images/                  # Images folder
 │
+├── .env.local                   # Environment variables (Supabase, payments, etc.)
+├── BACKEND_CHECKLIST.md         # Step-by-step backend setup checklist
 ├── tailwind.config.ts           # Tailwind configuration (brand colors)
 ├── tsconfig.json                # TypeScript configuration
 ├── next.config.js               # Next.js configuration
@@ -181,42 +230,75 @@ className="text-gradient-brand" // Gradient text utility
 - [x] Analytics and reporting UI
 - [x] Content moderation interface
 
-### 🚧 Phase 2 - Backend & Authentication (Next Steps)
+### ✅ Phase 2 - Backend Setup (Completed)
 
-- [ ] User authentication (NextAuth.js or Clerk)
-- [ ] Database setup (PostgreSQL + Prisma or Supabase)
-- [ ] API routes for talents, bookings, payments
-- [ ] Payment integration (Paynow + Stripe + Innbucks)
-- [ ] File upload for videos (Cloudflare Stream or S3)
-- [ ] Email notifications (SendGrid or Resend)
-- [ ] WhatsApp notifications
+**Supabase Integration:**
+- [x] Supabase project configuration
+- [x] Database schema design (7 core tables)
+- [x] Row Level Security (RLS) policies
+- [x] Database functions and triggers
+- [x] Client-side and server-side Supabase clients
+- [x] API utility functions for all entities
+- [x] Real-time subscriptions setup
+- [x] File storage configuration
 
-### 🚧 Phase 3 - Dashboards (Future)
+**API Layer:**
+- [x] Talent API (CRUD operations, search, filters)
+- [x] Booking API (create, update, status tracking)
+- [x] User API (profiles, authentication helpers)
+- [x] Favorites API (add, remove, toggle)
+- [x] Notifications API (real-time, mark as read)
+- [x] Admin API (platform stats, analytics)
 
-- [ ] Customer dashboard (order history, favorites)
-- [ ] Talent dashboard (requests, earnings, analytics)
-- [ ] Admin panel (verification, moderation, analytics)
+**Documentation:**
+- [x] Complete Supabase setup guide with SQL migrations
+- [x] Backend architecture documentation
+- [x] Step-by-step setup checklist
+- [x] Usage examples and troubleshooting
 
-### 🚧 Phase 4 - Advanced Features (Future)
+**📖 See:** [BACKEND_CHECKLIST.md](./BACKEND_CHECKLIST.md) to set up Supabase
 
-- [ ] Video review and approval system
-- [ ] Refund processing automation
-- [ ] Gift card system
-- [ ] Analytics and reporting
+### 🚧 Phase 3 - Authentication & Integration (Next)
+
+- [ ] Authentication pages (login, signup, password reset)
+- [ ] Connect dashboards to Supabase (replace mock data)
+- [ ] Protected routes with middleware
+- [ ] User session management
+- [ ] Role-based access control
+
+### 🚧 Phase 4 - Payments & Media (Future)
+
+- [ ] Payment integration (Paynow + Stripe + InnBucks)
+- [ ] Payment webhook handlers
+- [ ] Video upload to Supabase Storage
+- [ ] Cloudflare Stream integration
+- [ ] Email notifications (Resend)
+- [ ] SMS/WhatsApp notifications (Twilio)
+
+### 🚧 Phase 5 - Polish & Deploy (Future)
+
+- [ ] End-to-end testing
+- [ ] Performance optimization
 - [ ] SEO optimization
-- [ ] Performance monitoring
+- [ ] Error monitoring (Sentry)
+- [ ] Analytics tracking
+- [ ] Deploy to Vercel
+- [ ] Custom domain setup
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Category      | Technology   | Why?                                                  |
-| ------------- | ------------ | ----------------------------------------------------- |
-| **Framework** | Next.js 14   | Server-side rendering, App Router, Image optimization |
-| **Language**  | TypeScript   | Type safety, better DX                                |
-| **Styling**   | Tailwind CSS | Utility-first, responsive design                      |
-| **Icons**     | Lucide React | Lightweight, tree-shakeable                           |
-| **State**     | React Hooks  | Built-in, no external library needed                  |
+| Category       | Technology            | Why?                                                  |
+| -------------- | --------------------- | ----------------------------------------------------- |
+| **Framework**  | Next.js 14            | Server-side rendering, App Router, Image optimization |
+| **Language**   | TypeScript            | Type safety, better DX                                |
+| **Styling**    | Tailwind CSS          | Utility-first, responsive design                      |
+| **Icons**      | Lucide React          | Lightweight, tree-shakeable                           |
+| **State**      | React Hooks           | Built-in, no external library needed                  |
+| **Database**   | Supabase (PostgreSQL) | Real-time, RLS, built-in auth                         |
+| **Backend**    | Supabase BaaS         | Serverless, auto-scaling, file storage                |
+| **API Client** | @supabase/supabase-js | Type-safe database queries                            |
 
 ---
 
@@ -418,8 +500,41 @@ npm install
 
 For questions or issues, contact:
 
-- Email: bsiwonde@gmail.com
-- WhatsApp: +821048370343
+- Email: info@torashaout.com
+- Phone (Calls or WhatsApp): +821048370343
+
+---
+
+## 📚 Documentation
+
+Complete documentation is available for all aspects of the project:
+
+### Getting Started
+- **[QUICKSTART.md](./QUICKSTART.md)** - Quick setup guide
+- **[CODESPACES.md](./CODESPACES.md)** - GitHub Codespaces setup
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Deployment instructions
+
+### Backend & API
+- **[docs/BACKEND_README.md](./docs/BACKEND_README.md)** - Complete backend guide with API examples
+- **[docs/SUPABASE_SETUP.md](./docs/SUPABASE_SETUP.md)** - Database setup and schema
+- **[docs/AUTHENTICATION_GUIDE.md](./docs/AUTHENTICATION_GUIDE.md)** - Authentication flow documentation
+
+### Development
+- **[ENHANCEMENTS.md](./ENHANCEMENTS.md)** - Feature documentation and updates
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
+- **[RECENT_CHANGES.md](./RECENT_CHANGES.md)** - Latest updates and migration guides
+- **[PAGINATION_IMPLEMENTATION.md](./PAGINATION_IMPLEMENTATION.md)** - Pagination system implementation guide
+- **[DOCUMENTATION_WORKFLOW.md](./DOCUMENTATION_WORKFLOW.md)** - Documentation update workflow
+
+### Contributing
+Before pushing changes, always update relevant documentation. See [DOCUMENTATION_WORKFLOW.md](./DOCUMENTATION_WORKFLOW.md) for the complete workflow.
+
+**Pre-Push Checklist:**
+- [ ] Update [CHANGELOG.md](./CHANGELOG.md) with your changes
+- [ ] Update [ENHANCEMENTS.md](./ENHANCEMENTS.md) if adding features
+- [ ] Update backend docs if changing API/database
+
+A pre-push git hook will remind you to update documentation.
 
 ---
 

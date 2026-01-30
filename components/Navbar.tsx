@@ -1,5 +1,16 @@
 'use client';
 
+/**
+ * @deprecated Use AuthNavbar instead. This component does not support authentication state.
+ * AuthNavbar provides:
+ * - User authentication status display
+ * - Profile avatar and dropdown menu
+ * - Role-based dashboard links
+ * - Sign out functionality with toast notifications
+ *
+ * Migration: Replace `import { Navbar }` with `import { AuthNavbar }` from '@/components/AuthNavbar'
+ */
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
@@ -8,11 +19,14 @@ import { Button } from '@/components/ui/Button';
 import { NotificationCenter } from '@/components/NotificationCenter';
 
 interface NavbarProps {
-  currency: Currency;
-  onCurrencyChange: (currency: Currency) => void;
+  currency?: Currency;
+  onCurrencyChange?: (currency: Currency) => void;
 }
 
-export function Navbar({ currency, onCurrencyChange }: NavbarProps) {
+/**
+ * @deprecated Use AuthNavbar instead
+ */
+export function Navbar({ currency = 'USD', onCurrencyChange }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Search, ChevronDown, ChevronUp, HelpCircle, Video, CreditCard, Shield, Clock, RefreshCw, Users } from 'lucide-react'
 import { Currency } from '@/types'
-import { Navbar } from '@/components/Navbar'
+import { AuthNavbar } from '@/components/AuthNavbar'
 import { Footer } from '@/components/Footer'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -177,7 +177,7 @@ export default function FAQPage() {
       id: 'request-refund',
       category: 'refunds',
       question: 'How do I request a refund?',
-      answer: 'Visit your booking page and click the "Request Refund" button, or contact our support team at support@torashaout.com with your booking ID. We\'ll review your request within 24 hours and process approved refunds immediately.'
+      answer: 'Visit your booking page and click the "Request Refund" button, or contact our support team at info@torashaout.com with your booking ID. We\'ll review your request within 24 hours and process approved refunds immediately.'
     },
     {
       id: 'celebrity-decline',
@@ -239,7 +239,7 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Hero Section */}

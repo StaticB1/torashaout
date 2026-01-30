@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Bell,
   X,
@@ -16,6 +16,8 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { Button } from './ui/Button';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 export type NotificationType =
   | 'booking_confirmed'
@@ -38,66 +40,122 @@ export interface Notification {
   actionUrl?: string;
 }
 
-interface NotificationCenterProps {
-  notifications?: Notification[];
-  onMarkAsRead?: (id: string) => void;
-  onMarkAllAsRead?: () => void;
-  onDelete?: (id: string) => void;
-}
+interface NotificationCenterProps {}
 
-// Mock notifications for demo
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'video_ready',
-    title: 'Your video is ready! 🎉',
-    message: 'Winky D has completed your video for Sarah\'s birthday',
-    timestamp: '2026-01-16T10:30:00Z',
-    read: false,
-    actionUrl: '/booking/1',
-  },
-  {
-    id: '2',
-    type: 'booking_request',
-    title: 'New booking request',
-    message: 'Someone requested a video from you for $50',
-    timestamp: '2026-01-16T08:15:00Z',
-    read: false,
-    actionUrl: '/dashboard',
-  },
-  {
-    id: '3',
-    type: 'payment_received',
-    title: 'Payment received',
-    message: 'You earned $37.50 from a completed video',
-    timestamp: '2026-01-15T14:20:00Z',
-    read: false,
-  },
-  {
-    id: '4',
-    type: 'review_received',
-    title: 'New 5-star review',
-    message: 'John D. left you an amazing review!',
-    timestamp: '2026-01-15T09:00:00Z',
-    read: true,
-  },
-  {
-    id: '5',
-    type: 'reminder',
-    title: 'Response deadline approaching',
-    message: 'You have 24 hours to respond to a booking request',
-    timestamp: '2026-01-14T16:30:00Z',
-    read: true,
-  },
-];
-
-export function NotificationCenter({
-  notifications = mockNotifications,
-  onMarkAsRead,
-  onMarkAllAsRead,
-  onDelete,
-}: NotificationCenterProps) {
+export function NotificationCenter({}: NotificationCenterProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+  const supabase = createClient();
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    if (!isAuthenticated) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/notifications');
+      const data = await response.json();
+
+      if (data.success) {
+        setNotifications(data.notifications);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mark notification as read
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'PATCH',
+      });
+
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+        );
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Mark all as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      const response = await fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        setNotifications((prev) =>
+          prev.map((n) => ({ ...n, read: true }))
+        );
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  // Delete notification
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchNotifications();
+  }, [isAuthenticated]);
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setNotifications((prev) => [payload.new as Notification, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setNotifications((prev) =>
+              prev.map((n) => (n.id === payload.new.id ? (payload.new as Notification) : n))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setNotifications((prev) => prev.filter((n) => n.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, supabase]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -198,9 +256,9 @@ export function NotificationCenter({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {unreadCount > 0 && onMarkAllAsRead && (
+                {unreadCount > 0 && (
                   <button
-                    onClick={onMarkAllAsRead}
+                    onClick={handleMarkAllAsRead}
                     className="text-sm text-purple-400 hover:text-purple-300 transition"
                   >
                     Mark all read
@@ -236,8 +294,8 @@ export function NotificationCenter({
                         !notification.read ? 'bg-neutral-800/30' : ''
                       }`}
                       onClick={() => {
-                        if (onMarkAsRead && !notification.read) {
-                          onMarkAsRead(notification.id);
+                        if (!notification.read) {
+                          handleMarkAsRead(notification.id);
                         }
                         if (notification.actionUrl) {
                           window.location.href = notification.actionUrl;
@@ -264,17 +322,15 @@ export function NotificationCenter({
                             <p className="text-xs text-neutral-500">
                               {formatTimestamp(notification.timestamp)}
                             </p>
-                            {onDelete && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDelete(notification.id);
-                                }}
-                                className="text-xs text-neutral-500 hover:text-red-400 transition"
-                              >
-                                Delete
-                              </button>
-                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(notification.id);
+                              }}
+                              className="text-xs text-neutral-500 hover:text-red-400 transition"
+                            >
+                              Delete
+                            </button>
                           </div>
                         </div>
                       </div>

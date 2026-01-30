@@ -1,0 +1,897 @@
+# ToraShaout Backend - Supabase Integration
+
+This document provides an overview of the backend architecture and how to get started with Supabase.
+
+---
+
+## Overview
+
+ToraShaout uses **Supabase** as its backend-as-a-service platform, providing:
+- PostgreSQL database with real-time subscriptions
+- Built-in authentication (email, OAuth, magic links)
+- Row Level Security (RLS) for data protection
+- File storage for videos and images
+- Edge functions for serverless logic
+
+---
+
+## Quick Start
+
+### 1. Install Dependencies ✅
+
+Already done! Supabase packages are installed:
+- `@supabase/supabase-js` - Core client library
+- `@supabase/ssr` - Server-side rendering support
+
+### 2. Set Up Supabase Project
+
+Follow the detailed guide: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+
+**Quick steps:**
+1. Create Supabase account at https://supabase.com
+2. Create new project
+3. Copy your project URL and API keys
+4. Update `.env.local` with credentials
+5. Run SQL migrations from setup guide
+
+### 3. Configure Environment Variables
+
+Open [.env.local](../.env.local) and update:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+```
+
+---
+
+## Architecture
+
+### Database Schema
+
+7 core tables:
+- `users` - User accounts (extends Supabase auth)
+- `talent_profiles` - Talent information and pricing
+- `bookings` - Video booking orders
+- `payments` - Payment transactions
+- `favorites` - User's favorite talents
+- `categories` - Talent categories
+- `notifications` - Real-time notifications
+
+See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for complete SQL schema.
+
+### Supabase Client Utilities
+
+Located in [/lib/supabase/](../lib/supabase/)
+
+#### Client-side (`client.ts`)
+```typescript
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
+const { data } = await supabase.from('talents').select('*')
+```
+
+Use in:
+- Client Components
+- Browser-side queries
+- Real-time subscriptions
+
+#### Server-side (`server.ts`)
+```typescript
+import { createClient } from '@/lib/supabase/server'
+
+const supabase = await createClient()
+const { data } = await supabase.from('users').select('*')
+```
+
+Use in:
+- Server Components
+- API Routes
+- Server Actions
+
+#### Admin Client (`server.ts`)
+```typescript
+import { createAdminClient } from '@/lib/supabase/server'
+
+const supabase = createAdminClient() // Bypasses RLS
+```
+
+Use for:
+- Admin operations
+- System-level queries
+- Background jobs
+
+---
+
+## API Functions
+
+Pre-built API functions in [/lib/api/](../lib/api/)
+
+### Talents API (`talents.ts`)
+
+```typescript
+import { getTalents, getTalentById, createTalentProfile } from '@/lib/api/talents'
+
+// Get all talents with filters
+const talents = await getTalents({
+  category: 'musician',
+  verified: true,
+  search: 'winky'
+})
+
+// Get single talent
+const talent = await getTalentById('talent-id')
+
+// Create talent profile
+await createTalentProfile({
+  userId: user.id,
+  displayName: 'John Doe',
+  category: 'musician',
+  priceUSD: 50,
+  priceZIG: 2500
+})
+```
+
+### Bookings API (`bookings.ts`)
+
+```typescript
+import { getMyBookings, createBooking, updateBooking } from '@/lib/api/bookings'
+
+// Get user's bookings
+const bookings = await getMyBookings('completed')
+
+// Create booking
+await createBooking({
+  customerId: user.id,
+  talentId: 'talent-id',
+  recipientName: 'Jane',
+  occasion: 'Birthday',
+  currency: 'USD',
+  amountPaid: 50,
+  platformFee: 5,
+  talentEarnings: 45
+})
+
+// Update booking status
+await updateBooking('booking-id', {
+  status: 'completed',
+  videoUrl: 'https://...'
+})
+```
+
+### Users API (`users.ts`)
+
+```typescript
+import { getCurrentUser, updateUserProfile } from '@/lib/api/users'
+
+// Get current user
+const user = await getCurrentUser()
+
+// Update profile
+await updateUserProfile(user.id, {
+  fullName: 'John Doe',
+  preferredCurrency: 'ZIG'
+})
+```
+
+### Favorites API (`favorites.ts`)
+
+```typescript
+import { getFavorites, addFavorite, toggleFavorite } from '@/lib/api/favorites'
+
+// Get user favorites
+const favorites = await getFavorites()
+
+// Add to favorites
+await addFavorite(userId, talentId)
+
+// Toggle favorite
+await toggleFavorite(userId, talentId)
+```
+
+### Notifications API
+
+**UPDATED:** The notifications API has been split into client and server modules for better security and performance.
+
+#### Client-side (`notifications.client.ts`)
+
+```typescript
+import {
+  getNotifications,
+  getUnreadCount,
+  subscribeToNotifications
+} from '@/lib/api/notifications.client'
+
+// Get notifications (client component)
+const notifications = await getNotifications()
+
+// Get unread count
+const unreadCount = await getUnreadCount()
+
+// Real-time subscription
+const unsubscribe = subscribeToNotifications(userId, (notification) => {
+  console.log('New notification:', notification)
+})
+```
+
+#### Server-side (`notifications.server.ts`)
+
+```typescript
+import {
+  getNotifications,
+  createNotification,
+  sendBulkNotifications
+} from '@/lib/api/notifications.server'
+
+// Get notifications (server component/API route)
+const notifications = await getNotifications(userId)
+
+// Create notification
+await createNotification({
+  userId,
+  type: 'booking_confirmed',
+  title: 'Booking confirmed!',
+  message: 'Your video request has been accepted'
+})
+
+// Send bulk notifications
+await sendBulkNotifications([...])
+```
+
+### Admin API (`admin.ts`)
+
+```typescript
+import {
+  getPlatformStats,
+  getPendingTalents,
+  getAllBookings
+} from '@/lib/api/admin'
+
+// Get platform statistics
+const stats = await getPlatformStats()
+
+// Get pending talent verifications
+const pending = await getPendingTalents()
+
+// Get all bookings
+const bookings = await getAllBookings({ status: 'completed' })
+```
+
+---
+
+## Custom React Hooks
+
+**NEW:** Custom hooks for simplified state management in dashboards.
+
+### Customer Dashboard Hook (`useCustomerDashboard.ts`)
+
+```typescript
+'use client'
+import { useCustomerDashboard } from '@/lib/hooks/useCustomerDashboard'
+
+export function CustomerDashboard() {
+  const {
+    bookings,
+    favorites,
+    stats,
+    loading,
+    error,
+    refreshBookings,
+    toggleFavorite
+  } = useCustomerDashboard()
+
+  if (loading) return <Skeleton />
+  if (error) return <Error message={error} />
+
+  return (
+    <div>
+      <Stats data={stats} />
+      <Bookings data={bookings} />
+      <Favorites data={favorites} onToggle={toggleFavorite} />
+    </div>
+  )
+}
+```
+
+**Features:**
+- Automatic data fetching on mount
+- Real-time synchronization with Supabase
+- Optimistic UI updates
+- Error handling and loading states
+- Refresh and mutation functions
+
+### Talent Profile Hook (`useTalentProfile.ts`)
+
+```typescript
+'use client'
+import { useTalentProfile } from '@/lib/hooks/useTalentProfile'
+
+export function TalentDashboard() {
+  const {
+    profile,
+    bookings,
+    earnings,
+    stats,
+    loading,
+    updateProfile,
+    acceptBooking,
+    rejectBooking
+  } = useTalentProfile()
+
+  if (loading) return <Skeleton />
+
+  return (
+    <div>
+      <ProfileCard profile={profile} onUpdate={updateProfile} />
+      <BookingRequests data={bookings} onAccept={acceptBooking} />
+      <EarningsChart data={earnings} stats={stats} />
+    </div>
+  )
+}
+```
+
+**Features:**
+- Manages talent profile state
+- Handles booking requests
+- Tracks earnings and analytics
+- Real-time notification integration
+- Profile update functions
+
+### Customer Bookings Hook (`useCustomerBookings.ts`)
+
+**NEW:** Hook for fetching bookings where the user is the customer (used in both fan dashboard and talent's "My Orders" tab).
+
+```typescript
+'use client'
+import { useCustomerBookings } from '@/lib/hooks/useCustomerBookings'
+
+export function MyOrders() {
+  const {
+    bookings,
+    pendingBookings,
+    completedBookings,
+    loading,
+    error,
+    refresh,
+    stats
+  } = useCustomerBookings()
+
+  if (loading) return <Skeleton />
+
+  return (
+    <div>
+      <StatsGrid>
+        <Stat label="Total Orders" value={stats.totalOrders} />
+        <Stat label="Pending" value={stats.pendingOrders} />
+        <Stat label="Completed" value={stats.completedOrders} />
+        <Stat label="Total Spent" value={stats.totalSpent} />
+      </StatsGrid>
+      <ActiveOrders bookings={pendingBookings} />
+      <OrderHistory bookings={completedBookings} />
+    </div>
+  )
+}
+```
+
+**Features:**
+- Fetches bookings where user is the customer (via `/api/bookings`)
+- Separates pending and completed bookings
+- Calculates stats (total orders, pending, completed, total spent)
+- Loading and error states
+- Refresh function for manual reload
+
+**Use Cases:**
+- Fan dashboard - shows orders they placed
+- Talent dashboard "My Orders" tab - shows orders talent placed on other talents
+
+---
+
+## Talent Dashboard Features
+
+The talent dashboard (`/dashboard`) has the following tabs:
+
+| Tab | Description |
+|-----|-------------|
+| **Overview** | Quick stats, pending requests, recent reviews |
+| **Requests** | Bookings where others booked this talent (work to fulfill) |
+| **My Orders** | Bookings where this talent booked other talents (as customer) |
+| **Earnings** | Revenue tracking and payout requests |
+| **Settings** | Profile, pricing, and availability settings |
+
+### My Orders Tab (Talent as Customer)
+
+Talents can also book other talents. The "My Orders" tab shows:
+- Stats: Total orders, pending, completed, total spent
+- Active orders with status, talent info, and view details
+- Order history for completed bookings
+- CTA to browse and book more talent
+
+This uses the `useCustomerBookings` hook which calls `/api/bookings` (GET) to fetch bookings where `customer_id` matches the current user.
+
+---
+
+## Usage Examples
+
+### Fetching Data in Server Component
+
+```typescript
+// app/browse/page.tsx
+import { getTalents } from '@/lib/api/talents'
+
+export default async function BrowsePage() {
+  const talents = await getTalents({ verified: true })
+
+  return (
+    <div>
+      {talents.map(talent => (
+        <TalentCard key={talent.id} talent={talent} />
+      ))}
+    </div>
+  )
+}
+```
+
+### Client Component with Real-time
+
+```typescript
+'use client'
+import { useEffect, useState } from 'react'
+import { getNotifications, subscribeToNotifications } from '@/lib/api/notifications'
+
+export function NotificationCenter() {
+  const [notifications, setNotifications] = useState([])
+
+  useEffect(() => {
+    // Load initial notifications
+    getNotifications().then(setNotifications)
+
+    // Subscribe to new notifications
+    const unsubscribe = subscribeToNotifications(userId, (newNotif) => {
+      setNotifications(prev => [newNotif, ...prev])
+    })
+
+    return unsubscribe
+  }, [])
+
+  return (
+    <div>
+      {notifications.map(n => (
+        <NotificationItem key={n.id} notification={n} />
+      ))}
+    </div>
+  )
+}
+```
+
+### Server Action for Form Submission
+
+```typescript
+// app/actions.ts
+'use server'
+import { createBooking } from '@/lib/api/bookings'
+import { createClient } from '@/lib/supabase/server'
+
+export async function submitBooking(formData: FormData) {
+  const supabase = await createClient()
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  // Create booking
+  const booking = await createBooking({
+    customerId: user.id,
+    talentId: formData.get('talentId') as string,
+    recipientName: formData.get('recipientName') as string,
+    occasion: formData.get('occasion') as string,
+    currency: 'USD',
+    amountPaid: 50,
+    platformFee: 5,
+    talentEarnings: 45
+  })
+
+  return booking
+}
+```
+
+---
+
+## Authentication Flow
+
+### Sign Up
+
+```typescript
+const supabase = createClient()
+
+const { data, error } = await supabase.auth.signUp({
+  email: 'user@example.com',
+  password: 'password123',
+  options: {
+    data: {
+      full_name: 'John Doe',
+      role: 'fan'
+    }
+  }
+})
+
+// User profile automatically created via trigger
+```
+
+### Sign In
+
+```typescript
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'password123'
+})
+```
+
+### Sign Out
+
+```typescript
+await supabase.auth.signOut()
+```
+
+### Get Current User
+
+```typescript
+const { data: { user } } = await supabase.auth.getUser()
+```
+
+---
+
+## Security
+
+### Row Level Security (RLS)
+
+All tables have RLS policies:
+- Users can only see their own data
+- Talents can manage their bookings
+- Customers can view their orders
+- Admins can access all data
+- Public can view verified talent profiles
+
+### API Keys
+
+- **Anon Key**: Safe for client-side use (respects RLS)
+- **Service Role Key**: Server-side only (bypasses RLS)
+
+**Never expose service role key in client code!**
+
+---
+
+## Real-time Subscriptions
+
+```typescript
+const supabase = createClient()
+
+// Subscribe to table changes
+const channel = supabase
+  .channel('bookings')
+  .on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'bookings',
+      filter: `customer_id=eq.${userId}`
+    },
+    (payload) => {
+      console.log('Booking updated:', payload.new)
+    }
+  )
+  .subscribe()
+
+// Unsubscribe
+supabase.removeChannel(channel)
+```
+
+---
+
+## File Storage
+
+### Upload Video
+
+```typescript
+const supabase = createClient()
+
+const { data, error } = await supabase.storage
+  .from('videos')
+  .upload(`${userId}/${bookingId}.mp4`, file)
+
+// Get public URL
+const { data: { publicUrl } } = supabase.storage
+  .from('videos')
+  .getPublicUrl(data.path)
+```
+
+### Upload Thumbnail
+
+```typescript
+await supabase.storage
+  .from('thumbnails')
+  .upload(`${talentId}/profile.jpg`, file)
+```
+
+---
+
+## Testing
+
+### Test Database Connection
+
+```typescript
+// pages/api/test-db.ts
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET() {
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('categories').select('*')
+
+  return Response.json({ data, error })
+}
+```
+
+### Test Authentication
+
+```typescript
+const { data: { user } } = await supabase.auth.getUser()
+console.log('Current user:', user)
+```
+
+---
+
+## Troubleshooting
+
+### "relation does not exist" error
+- Run all SQL migrations from setup guide
+- Check table names match schema
+
+### "JWT expired" error
+- Session expired, sign in again
+- Check middleware is refreshing sessions
+
+### "permission denied" error
+- Check RLS policies
+- Verify user is authenticated
+- Check user has correct role
+
+### Can't insert data
+- Verify required fields
+- Check foreign key constraints
+- Review RLS INSERT policies
+
+---
+
+## UI Components
+
+**NEW:** Reusable UI components for better UX.
+
+### AuthGuard Component
+
+Protects routes that require authentication:
+
+```typescript
+import { AuthGuard } from '@/components/AuthGuard'
+
+export default function ProtectedPage() {
+  return (
+    <AuthGuard>
+      <YourProtectedContent />
+    </AuthGuard>
+  )
+}
+```
+
+### Skeleton Component
+
+Shows loading states:
+
+```typescript
+import { Skeleton } from '@/components/ui/Skeleton'
+
+export function LoadingCard() {
+  return (
+    <div>
+      <Skeleton variant="text" width={200} />
+      <Skeleton variant="circular" size={40} />
+      <Skeleton variant="rectangular" height={100} />
+    </div>
+  )
+}
+```
+
+### Toast Component
+
+Shows user feedback notifications:
+
+```typescript
+import { toast } from '@/components/ui/Toast'
+
+// Success toast
+toast.success('Booking confirmed!')
+
+// Error toast
+toast.error('Payment failed')
+
+// Info toast
+toast.info('Check your email for confirmation')
+
+// Warning toast
+toast.warning('Session expires in 5 minutes')
+```
+
+---
+
+## REST API Routes
+
+### Bookings API (`/api/bookings`)
+
+#### POST `/api/bookings` - Create Booking
+
+Creates a new booking with simulated payment processing.
+
+**Request Body:**
+```typescript
+{
+  talentId: string;        // UUID of the talent
+  recipientName: string;   // Name of video recipient
+  occasion: string;        // Birthday, Anniversary, etc.
+  instructions: string;    // Custom instructions for talent
+  currency: 'USD' | 'ZIG'; // Payment currency
+  paymentGateway: 'paynow' | 'stripe' | 'innbucks';
+  fromName: string;        // Customer's name
+  fromEmail: string;       // Customer's email
+  deliveryDate?: string;   // Optional specific delivery date
+  isPublic?: boolean;      // Allow video to be featured
+}
+```
+
+**Response:**
+```typescript
+{
+  success: true;
+  booking: {
+    id: string;
+    bookingCode: string;      // e.g., "TS-ABC123-XYZ"
+    talentName: string;
+    recipientName: string;
+    occasion: string;
+    amount: number;
+    currency: string;
+    status: 'payment_confirmed';
+    dueDate: string;
+    estimatedDelivery: string;
+  };
+  message: string;
+}
+```
+
+**Features:**
+- Generates unique booking code (format: `TS-{timestamp}-{random}`)
+- Calculates 25% platform fee automatically
+- Creates simulated payment record
+- Updates talent's total bookings count
+- Sets due date based on talent's response time
+
+#### GET `/api/bookings` - List User's Bookings
+
+Returns all bookings for the authenticated user.
+
+**Query Parameters:**
+- `status` (optional): Filter by status (`pending_payment`, `payment_confirmed`, `in_progress`, `completed`, `cancelled`, `refunded`)
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: Array<{
+    id: string;
+    booking_code: string;
+    recipient_name: string;
+    occasion: string;
+    status: string;
+    amount_paid: number;
+    currency: string;
+    created_at: string;
+    talent: {
+      id: string;
+      display_name: string;
+      thumbnail_url: string;
+      category: string;
+    };
+  }>;
+}
+```
+
+#### GET `/api/bookings/[code]` - Get Single Booking
+
+Fetches a booking by its booking code or UUID.
+
+**Authorization:**
+- Customer who made the booking
+- Talent assigned to the booking
+- Admin users
+
+**Response:**
+```typescript
+{
+  success: true;
+  data: {
+    id: string;
+    booking_code: string;
+    customer_id: string;
+    talent_id: string;
+    recipient_name: string;
+    occasion: string;
+    instructions: string;
+    currency: string;
+    amount_paid: number;
+    platform_fee: number;
+    talent_earnings: number;
+    status: string;
+    video_url: string | null;
+    due_date: string;
+    completed_at: string | null;
+    created_at: string;
+    talent: {
+      id: string;
+      display_name: string;
+      thumbnail_url: string;
+      category: string;
+      response_time_hours: number;
+    };
+  };
+}
+```
+
+### Talent Applications API (`/api/talent-applications`)
+
+#### POST `/api/talent-applications` - Submit Application
+
+Submit a new talent application (requires authentication).
+
+#### GET `/api/talent-applications` - List Applications (Admin)
+
+Returns all talent applications (admin only).
+
+---
+
+## Next Steps
+
+1. ✅ **Backend Setup Complete** - Database and API ready
+2. ✅ **Authentication Pages Created** - Login, Signup, Password Reset
+3. ✅ **Custom Hooks Added** - useCustomerDashboard, useTalentProfile
+4. ✅ **UI Components Created** - AuthGuard, Skeleton, Toast
+5. ✅ **Checkout Flow** - Booking creation with simulated payments
+6. 🔗 **Connect Dashboards** - Replace mock data with real queries
+7. 💳 **Payment Integration** - Connect Paynow, Stripe webhooks (currently simulated)
+8. 📹 **Video Storage** - Set up Cloudflare Stream integration
+9. 📧 **Notifications** - Email and SMS integration
+10. 🚀 **Deploy** - Deploy to Vercel with Supabase
+
+---
+
+## Resources
+
+- [Supabase Setup Guide](./SUPABASE_SETUP.md) - Complete database setup
+- [Supabase Docs](https://supabase.com/docs) - Official documentation
+- [Next.js + Supabase](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs) - Integration guide
+- [RLS Guide](https://supabase.com/docs/guides/auth/row-level-security) - Security policies
+- [Real-time Guide](https://supabase.com/docs/guides/realtime) - Subscriptions
+
+---
+
+## Support
+
+For issues or questions:
+1. Check [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) troubleshooting section
+2. Review Supabase dashboard logs
+3. Test with SQL queries in Supabase SQL Editor
+
+---
+
+**Backend Setup Complete!** 🎉
+
+Your ToraShaout backend is ready for development. Follow the next steps to connect your frontend to Supabase.

@@ -1,22 +1,18 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Search, Filter, X } from 'lucide-react'
-import { mockTalentProfiles } from '@/lib/mock-data'
-import { Currency, TalentCategory } from '@/types'
+import { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
+import { Search, Filter, X, Zap } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { Currency, TalentCategory, TalentProfile } from '@/types'
 import { TalentCard } from '@/components/TalentCard'
-import { Navbar } from '@/components/Navbar'
+import { AuthNavbar } from '@/components/AuthNavbar'
 import { Footer } from '@/components/Footer'
 
-const categories: { value: TalentCategory | 'all'; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'musician', label: 'Musicians' },
-  { value: 'comedian', label: 'Comedians' },
-  { value: 'gospel', label: 'Gospel' },
-  { value: 'business', label: 'Business' },
-  { value: 'sports', label: 'Sports' },
-  { value: 'influencer', label: 'Influencers' },
-]
+interface CategoryOption {
+  value: TalentCategory | 'all'
+  label: string
+}
 
 const sortOptions = [
   { value: 'popular', label: 'Most Popular' },
@@ -32,9 +28,103 @@ export default function BrowsePage() {
   const [selectedCategory, setSelectedCategory] = useState<TalentCategory | 'all'>('all')
   const [sortBy, setSortBy] = useState('popular')
   const [showFilters, setShowFilters] = useState(false)
+  const [talents, setTalents] = useState<TalentProfile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [categories, setCategories] = useState<CategoryOption[]>([{ value: 'all', label: 'All' }])
+
+  // Load talents from database
+  useEffect(() => {
+    const loadTalents = async () => {
+      setLoading(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('talent_profiles')
+          .select(`
+            *,
+            users:user_id (
+              id,
+              email,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('admin_verified', true)
+          .order('total_bookings', { ascending: false })
+          .order('average_rating', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching talents:', error)
+          setTalents([])
+        } else {
+          // Map database fields to TalentProfile type
+          const mappedTalents: TalentProfile[] = (data || []).map((talent: any) => ({
+            id: talent.id,
+            userId: talent.user_id,
+            displayName: talent.display_name,
+            bio: talent.bio,
+            category: talent.category,
+            priceUSD: talent.price_usd,
+            priceZIG: talent.price_zig,
+            thumbnailUrl: talent.thumbnail_url,
+            profileVideoUrl: talent.profile_video_url,
+            responseTimeHours: talent.response_time_hours,
+            totalBookings: talent.total_bookings,
+            averageRating: talent.average_rating,
+            isAcceptingBookings: talent.is_accepting_bookings,
+            adminVerified: talent.admin_verified,
+            createdAt: talent.created_at,
+            updatedAt: talent.updated_at,
+            user: talent.users ? {
+              id: talent.users.id,
+              email: talent.users.email,
+              fullName: talent.users.full_name,
+              avatarUrl: talent.users.avatar_url,
+            } : undefined,
+          }))
+          setTalents(mappedTalents)
+        }
+      } catch (error) {
+        console.error('Error loading talents:', error)
+        setTalents([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadTalents()
+  }, [])
+
+  // Load categories from database
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name, slug')
+          .order('name')
+
+        if (error) {
+          console.error('Error fetching categories:', error)
+        } else if (data) {
+          const categoryOptions: CategoryOption[] = [
+            { value: 'all', label: 'All' },
+            ...data.map((cat: { name: string; slug: string }) => ({
+              value: cat.slug as TalentCategory,
+              label: cat.name,
+            }))
+          ]
+          setCategories(categoryOptions)
+        }
+      } catch (error) {
+        console.error('Error loading categories:', error)
+      }
+    }
+    loadCategories()
+  }, [])
 
   const filteredAndSortedTalent = useMemo(() => {
-    let filtered = mockTalentProfiles
+    let filtered = talents
 
     // Filter by search query
     if (searchQuery) {
@@ -72,11 +162,36 @@ export default function BrowsePage() {
     })
 
     return sorted
-  }, [searchQuery, selectedCategory, sortBy, currency])
+  }, [talents, searchQuery, selectedCategory, sortBy, currency])
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+
+      {/* Coming Soon Notice Banner */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 border-b-2 border-pink-500 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <div className="flex items-center gap-2">
+              <Zap size={24} className="text-yellow-300 animate-pulse" />
+              <span className="text-lg sm:text-xl font-bold text-white">COMING SOON</span>
+            </div>
+            <div className="text-sm sm:text-base text-white/90">
+              This is a preview website. All profiles and content are for demonstration purposes only.
+              <span className="font-semibold"> No bookings are being accepted at this time.</span>
+              <br />
+              <span className="text-xs sm:text-sm mt-2 block">
+                Any talent who does not wish to be listed or have their pictures displayed can contact our admin for immediate removal.
+              </span>
+              <Link href="/contact">
+                <button className="mt-3 px-4 py-2 bg-white text-purple-700 rounded-lg font-semibold text-sm hover:bg-gray-100 transition">
+                  Contact Admin
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-8 pt-24">
         {/* Header */}
@@ -174,7 +289,7 @@ export default function BrowsePage() {
               {/* Stats */}
               <div className="mt-6 pt-6 border-t border-neutral-800">
                 <p className="text-sm text-neutral-400">
-                  Showing {filteredAndSortedTalent.length} of {mockTalentProfiles.length} talents
+                  Showing {filteredAndSortedTalent.length} of {talents.length} talents
                 </p>
               </div>
             </div>
@@ -182,7 +297,21 @@ export default function BrowsePage() {
 
           {/* Talent Grid */}
           <div className="flex-1">
-            {filteredAndSortedTalent.length > 0 ? (
+            {loading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="bg-neutral-900 rounded-xl overflow-hidden animate-pulse">
+                    <div className="w-full h-64 bg-neutral-800"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-6 bg-neutral-800 rounded w-3/4"></div>
+                      <div className="h-4 bg-neutral-800 rounded w-1/2"></div>
+                      <div className="h-4 bg-neutral-800 rounded w-full"></div>
+                      <div className="h-4 bg-neutral-800 rounded w-5/6"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredAndSortedTalent.length > 0 ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredAndSortedTalent.map((talent) => (
                   <TalentCard key={talent.id} talent={talent} currency={currency} />

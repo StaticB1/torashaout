@@ -4,28 +4,36 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { ArrowLeft, Download, Share2, Clock, CheckCircle, Video, AlertCircle, Mail } from 'lucide-react'
-import { mockTalentProfiles } from '@/lib/mock-data'
 import { BookingStatus, Currency } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 
-// Mock booking data - in a real app, this would come from an API
-const getMockBooking = (id: string) => {
-  const talent = mockTalentProfiles[0] // Using first talent as example
-  return {
-    id,
-    talent,
-    status: 'in_progress' as BookingStatus,
-    fromName: 'John Doe',
-    recipientName: 'Sarah',
-    occasion: 'Birthday',
-    instructions: 'Please wish Sarah a happy 25th birthday and mention our trip to Victoria Falls!',
-    amount: talent.priceUSD || 50,
-    currency: 'USD' as Currency,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-    deliveryDate: new Date(Date.now() + 22 * 60 * 60 * 1000).toISOString(), // In 22 hours
-    videoUrl: null,
-    paymentMethod: 'Paynow',
+interface BookingData {
+  id: string
+  booking_code: string
+  customer_id: string
+  talent_id: string
+  recipient_name: string
+  occasion: string
+  instructions: string
+  currency: Currency
+  amount_paid: number
+  platform_fee: number
+  talent_earnings: number
+  status: BookingStatus
+  video_url: string | null
+  due_date: string
+  completed_at: string | null
+  customer_rating: number | null
+  customer_review: string | null
+  created_at: string
+  updated_at: string
+  talent: {
+    id: string
+    display_name: string
+    thumbnail_url: string | null
+    category: string
+    response_time_hours: number
   }
 }
 
@@ -42,7 +50,7 @@ const statusConfig = {
     color: 'text-blue-400',
     bgColor: 'bg-blue-400/10',
     icon: CheckCircle,
-    description: 'Payment received, notifying talent',
+    description: 'Payment received, talent has been notified',
   },
   in_progress: {
     label: 'In Progress',
@@ -77,22 +85,74 @@ const statusConfig = {
 export default function BookingPage() {
   const params = useParams()
   const router = useRouter()
-  const [booking, setBooking] = useState(getMockBooking(params.id as string))
+  const [booking, setBooking] = useState<BookingData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchBooking = async () => {
+      try {
+        const response = await fetch(`/api/bookings/${params.id}`)
+        const data = await response.json()
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to load booking')
+        }
+
+        setBooking(data.data)
+      } catch (err: any) {
+        console.error('Error fetching booking:', err)
+        setError(err.message || 'Failed to load booking')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (params.id) {
+      fetchBooking()
+    }
+  }, [params.id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-neutral-400">Loading booking details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !booking) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Booking Not Found</h1>
+          <p className="text-neutral-400 mb-6">{error || 'The booking you are looking for does not exist.'}</p>
+          <Button onClick={() => router.push('/browse')} variant="primary">
+            Browse Talent
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const StatusIcon = statusConfig[booking.status].icon
-  const timeRemaining = new Date(booking.deliveryDate).getTime() - Date.now()
-  const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60))
+  const timeRemaining = new Date(booking.due_date).getTime() - Date.now()
+  const hoursRemaining = Math.max(0, Math.floor(timeRemaining / (1000 * 60 * 60)))
 
   const handleDownload = () => {
-    // In a real app, this would download the video
-    alert('Video download started!')
+    if (booking.video_url) {
+      window.open(booking.video_url, '_blank')
+    }
   }
 
   const handleShare = () => {
-    // In a real app, this would open share dialog
     if (navigator.share) {
       navigator.share({
-        title: 'Check out my video from ' + booking.talent.displayName,
+        title: 'Check out my video from ' + booking.talent.display_name,
         text: 'I got a personalized video message!',
         url: window.location.href,
       })
@@ -112,7 +172,7 @@ export default function BookingPage() {
             Back to Browse
           </button>
           <div className="text-sm text-neutral-400">
-            Booking #{booking.id}
+            Booking #{booking.booking_code}
           </div>
         </div>
       </nav>
@@ -131,7 +191,7 @@ export default function BookingPage() {
                 </h1>
                 <p className="text-neutral-300">{statusConfig[booking.status].description}</p>
               </div>
-              {booking.status === 'in_progress' && hoursRemaining > 0 && (
+              {(booking.status === 'in_progress' || booking.status === 'payment_confirmed') && hoursRemaining > 0 && (
                 <div className="text-right">
                   <div className="text-2xl font-bold">{hoursRemaining}h</div>
                   <div className="text-sm text-neutral-400">estimated</div>
@@ -144,15 +204,25 @@ export default function BookingPage() {
           {booking.status === 'completed' && (
             <div className="bg-neutral-900 rounded-xl overflow-hidden mb-6">
               <div className="aspect-video bg-black flex items-center justify-center relative">
-                <Video className="w-16 h-16 text-neutral-600" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-700 transition">
-                    <div className="w-0 h-0 border-l-[20px] border-l-white border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent ml-1"></div>
-                  </button>
-                </div>
+                {booking.video_url ? (
+                  <video
+                    src={booking.video_url}
+                    controls
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <>
+                    <Video className="w-16 h-16 text-neutral-600" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <button className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-700 transition">
+                        <div className="w-0 h-0 border-l-[20px] border-l-white border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent ml-1"></div>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="p-4 flex gap-3">
-                <Button onClick={handleDownload} variant="primary" className="flex-1">
+                <Button onClick={handleDownload} variant="primary" className="flex-1" disabled={!booking.video_url}>
                   <Download className="w-4 h-4 mr-2" />
                   Download Video
                 </Button>
@@ -170,12 +240,8 @@ export default function BookingPage() {
               <h2 className="text-xl font-bold mb-4">Booking Details</h2>
               <div className="space-y-4">
                 <div>
-                  <div className="text-sm text-neutral-400 mb-1">From</div>
-                  <div className="font-medium">{booking.fromName}</div>
-                </div>
-                <div>
                   <div className="text-sm text-neutral-400 mb-1">For</div>
-                  <div className="font-medium">{booking.recipientName}</div>
+                  <div className="font-medium">{booking.recipient_name}</div>
                 </div>
                 <div>
                   <div className="text-sm text-neutral-400 mb-1">Occasion</div>
@@ -190,7 +256,7 @@ export default function BookingPage() {
                 <div>
                   <div className="text-sm text-neutral-400 mb-1">Booked</div>
                   <div className="font-medium">
-                    {new Date(booking.createdAt).toLocaleDateString('en-US', {
+                    {new Date(booking.created_at).toLocaleDateString('en-US', {
                       month: 'long',
                       day: 'numeric',
                       year: 'numeric',
@@ -208,21 +274,27 @@ export default function BookingPage() {
               <div className="bg-neutral-900 rounded-xl p-6">
                 <h2 className="text-xl font-bold mb-4">Talent</h2>
                 <div className="flex gap-4">
-                  <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image
-                      src={booking.talent.thumbnailUrl}
-                      alt={booking.talent.displayName}
-                      fill
-                      className="object-cover"
-                    />
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-600 to-pink-600">
+                    {booking.talent.thumbnail_url ? (
+                      <Image
+                        src={booking.talent.thumbnail_url}
+                        alt={booking.talent.display_name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white">
+                        {booking.talent.display_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg mb-1">{booking.talent.displayName}</h3>
+                    <h3 className="font-semibold text-lg mb-1">{booking.talent.display_name}</h3>
                     <p className="text-neutral-400 capitalize text-sm mb-2">{booking.talent.category}</p>
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="w-4 h-4 text-neutral-500" />
                       <span className="text-neutral-400">
-                        Responds in {booking.talent.responseTimeHours}h
+                        Responds in {booking.talent.response_time_hours}h
                       </span>
                     </div>
                   </div>
@@ -236,12 +308,12 @@ export default function BookingPage() {
                   <div className="flex justify-between">
                     <span className="text-neutral-400">Amount</span>
                     <span className="font-semibold">
-                      {formatCurrency(booking.amount, booking.currency)}
+                      {formatCurrency(booking.amount_paid, booking.currency)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-neutral-400">Payment method</span>
-                    <span className="font-medium">{booking.paymentMethod}</span>
+                    <span className="text-neutral-400">Currency</span>
+                    <span className="font-medium">{booking.currency}</span>
                   </div>
                   <div className="pt-3 border-t border-neutral-800">
                     <div className="flex items-center gap-2 text-sm text-green-400">
@@ -265,7 +337,7 @@ export default function BookingPage() {
                 <div className="flex-1 pb-6 border-l-2 border-neutral-800 -ml-4 pl-8">
                   <div className="font-semibold mb-1">Booking Created</div>
                   <div className="text-sm text-neutral-400">
-                    {new Date(booking.createdAt).toLocaleString()}
+                    {new Date(booking.created_at).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -283,25 +355,33 @@ export default function BookingPage() {
               </div>
 
               <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 animate-pulse">
-                  <Video className="w-5 h-5 text-purple-400" />
+                <div className={`w-8 h-8 rounded-full ${booking.status === 'in_progress' || booking.status === 'completed' ? 'bg-purple-500/20' : 'bg-neutral-800'} flex items-center justify-center flex-shrink-0 ${booking.status === 'in_progress' ? 'animate-pulse' : ''}`}>
+                  <Video className={`w-5 h-5 ${booking.status === 'in_progress' || booking.status === 'completed' ? 'text-purple-400' : 'text-neutral-600'}`} />
                 </div>
                 <div className="flex-1 pb-6 -ml-4 pl-8">
-                  <div className="font-semibold mb-1">In Progress</div>
+                  <div className={`font-semibold mb-1 ${booking.status === 'payment_confirmed' ? 'text-neutral-500' : ''}`}>
+                    {booking.status === 'in_progress' ? 'In Progress' : booking.status === 'completed' ? 'Video Created' : 'Awaiting Video'}
+                  </div>
                   <div className="text-sm text-neutral-400">
-                    {booking.talent.displayName} is creating your video
+                    {booking.status === 'in_progress' || booking.status === 'completed'
+                      ? `${booking.talent.display_name} is creating your video`
+                      : 'Talent will start soon'}
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-5 h-5 text-neutral-600" />
+                <div className={`w-8 h-8 rounded-full ${booking.status === 'completed' ? 'bg-green-500/20' : 'bg-neutral-800'} flex items-center justify-center flex-shrink-0`}>
+                  <Mail className={`w-5 h-5 ${booking.status === 'completed' ? 'text-green-400' : 'text-neutral-600'}`} />
                 </div>
                 <div className="flex-1 -ml-4 pl-8">
-                  <div className="font-semibold mb-1 text-neutral-500">Delivery</div>
-                  <div className="text-sm text-neutral-600">
-                    Estimated delivery within {hoursRemaining}h
+                  <div className={`font-semibold mb-1 ${booking.status !== 'completed' ? 'text-neutral-500' : ''}`}>
+                    {booking.status === 'completed' ? 'Delivered' : 'Delivery'}
+                  </div>
+                  <div className={`text-sm ${booking.status === 'completed' ? 'text-neutral-400' : 'text-neutral-600'}`}>
+                    {booking.status === 'completed'
+                      ? `Delivered on ${new Date(booking.completed_at || '').toLocaleString()}`
+                      : `Estimated delivery within ${hoursRemaining}h`}
                   </div>
                 </div>
               </div>

@@ -3,9 +3,30 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { ArrowLeft, CreditCard, Shield, Clock, CheckCircle } from 'lucide-react'
-import { mockTalentProfiles } from '@/lib/mock-data'
-import { Currency, PaymentGateway } from '@/types'
+import Link from 'next/link'
+import { ArrowLeft, CreditCard, Shield, Clock, CheckCircle, Zap, AlertTriangle } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { Currency, PaymentGateway, TalentProfile, TalentCategory } from '@/types'
+
+// Database row type for talent_profiles
+interface TalentProfileRow {
+  id: string
+  user_id: string
+  display_name: string
+  bio: string | null
+  category: TalentCategory
+  price_usd: number | null
+  price_zig: number | null
+  thumbnail_url: string | null
+  profile_video_url: string | null
+  response_time_hours: number
+  total_bookings: number
+  average_rating: number
+  is_accepting_bookings: boolean
+  admin_verified: boolean
+  created_at: string
+  updated_at: string
+}
 import { formatCurrency } from '@/lib/utils'
 import BookingForm, { BookingFormData } from '@/components/BookingForm'
 
@@ -21,14 +42,74 @@ function CheckoutContent() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentGateway>('paynow')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-
-  const talent = mockTalentProfiles.find(t => t.id === talentId)
+  const [talent, setTalent] = useState<TalentProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!talent) {
-      router.push('/browse')
+    const loadTalent = async () => {
+      if (!talentId) {
+        router.push('/browse')
+        return
+      }
+
+      setLoading(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('talent_profiles')
+          .select('*')
+          .eq('id', talentId)
+          .eq('admin_verified', true)
+          .single() as { data: TalentProfileRow | null; error: any }
+
+        if (error || !data) {
+          console.error('Error fetching talent:', error)
+          router.push('/browse')
+          return
+        }
+
+        // Map database fields to TalentProfile type
+        const mappedTalent: TalentProfile = {
+          id: data.id,
+          userId: data.user_id,
+          displayName: data.display_name,
+          bio: data.bio ?? undefined,
+          category: data.category,
+          priceUSD: data.price_usd ?? undefined,
+          priceZIG: data.price_zig ?? undefined,
+          thumbnailUrl: data.thumbnail_url ?? undefined,
+          profileVideoUrl: data.profile_video_url ?? undefined,
+          responseTimeHours: data.response_time_hours,
+          totalBookings: data.total_bookings,
+          averageRating: data.average_rating,
+          isAcceptingBookings: data.is_accepting_bookings,
+          adminVerified: data.admin_verified,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        }
+        setTalent(mappedTalent)
+      } catch (error) {
+        console.error('Error loading talent:', error)
+        router.push('/browse')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [talent, router])
+
+    loadTalent()
+  }, [talentId, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-neutral-400">Loading checkout...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!talent) {
     return null
@@ -60,30 +141,50 @@ function CheckoutContent() {
 
   const handleBookingSubmit = async (formData: BookingFormData) => {
     setIsSubmitting(true)
+    setError(null)
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          talentId: talent.id,
+          recipientName: formData.recipientName,
+          occasion: formData.occasion,
+          instructions: formData.instructions,
+          currency,
+          paymentGateway: selectedPaymentMethod,
+          fromName: formData.fromName,
+          fromEmail: formData.fromEmail,
+          deliveryDate: formData.deliveryDate || null,
+          isPublic: formData.isPublic,
+        }),
+      })
 
-    // Create booking object
-    const bookingId = `BK${Date.now()}`
+      const data = await response.json()
 
-    // In a real app, this would send data to your backend
-    console.log('Booking data:', {
-      bookingId,
-      talentId: talent.id,
-      currency,
-      amount: currency === 'USD' ? talent.priceUSD : talent.priceZIG,
-      paymentGateway: selectedPaymentMethod,
-      ...formData,
-    })
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create booking')
+      }
 
-    setIsSubmitting(false)
-    setShowSuccess(true)
-
-    // Redirect to confirmation page
-    setTimeout(() => {
-      router.push(`/booking/${bookingId}`)
-    }, 2000)
+      // Check if payment is required
+      if (data.requiresPayment) {
+        // Redirect to payment page
+        router.push(`/payment/${data.booking.id}`)
+      } else {
+        // Payment already completed (shouldn't happen now)
+        setShowSuccess(true)
+        setTimeout(() => {
+          router.push(`/booking/${data.booking.bookingCode}`)
+        }, 2000)
+      }
+    } catch (err: any) {
+      console.error('Booking error:', err)
+      setError(err.message || 'Something went wrong. Please try again.')
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -100,6 +201,31 @@ function CheckoutContent() {
           </button>
         </div>
       </nav>
+
+      {/* Coming Soon Notice Banner - Extra Prominent for Checkout */}
+      <div className="bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 border-b-4 border-red-500 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col items-center justify-center gap-3 text-center">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={32} className="text-white animate-pulse" />
+              <span className="text-2xl sm:text-3xl font-bold text-white">DEMO ONLY - NOT OPERATIONAL</span>
+              <AlertTriangle size={32} className="text-white animate-pulse" />
+            </div>
+            <div className="text-base sm:text-lg text-white font-semibold max-w-3xl">
+              This checkout page is for demonstration purposes only. Payment processing is not active and no actual bookings will be created. The platform is launching soon!
+              <br />
+              <span className="text-sm mt-2 block font-normal">
+                Any talent who does not wish to be listed or have their pictures displayed can contact our admin for immediate removal.
+              </span>
+              <Link href="/contact">
+                <button className="mt-3 px-5 py-2 bg-white text-red-700 rounded-lg font-bold text-sm hover:bg-gray-100 transition shadow-lg">
+                  Contact Admin
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
@@ -154,6 +280,23 @@ function CheckoutContent() {
                     </button>
                   ))}
                 </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className="mt-4 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Continue to Payment Button */}
+                <button
+                  type="submit"
+                  form="booking-form"
+                  disabled={isSubmitting}
+                  className="w-full mt-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg font-semibold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Processing...' : 'Continue to Payment'}
+                </button>
               </div>
             </div>
 
@@ -164,13 +307,19 @@ function CheckoutContent() {
 
                 {/* Talent Info */}
                 <div className="flex gap-4 mb-6 pb-6 border-b border-neutral-800">
-                  <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image
-                      src={talent.thumbnailUrl}
-                      alt={talent.displayName}
-                      fill
-                      className="object-cover"
-                    />
+                  <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-600 to-pink-600">
+                    {talent.thumbnailUrl ? (
+                      <Image
+                        src={talent.thumbnailUrl}
+                        alt={talent.displayName}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white">
+                        {talent.displayName.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">{talent.displayName}</h3>
@@ -205,7 +354,7 @@ function CheckoutContent() {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-neutral-300">
                     <span>Video message</span>
-                    <span>{formatCurrency(currency === 'USD' ? talent.priceUSD : talent.priceZIG, currency)}</span>
+                    <span>{formatCurrency(currency === 'USD' ? (talent.priceUSD ?? 0) : (talent.priceZIG ?? 0), currency)}</span>
                   </div>
                   <div className="flex justify-between text-neutral-300">
                     <span>Service fee</span>
@@ -213,7 +362,7 @@ function CheckoutContent() {
                   </div>
                   <div className="border-t border-neutral-800 pt-3 flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>{formatCurrency(currency === 'USD' ? talent.priceUSD : talent.priceZIG, currency)}</span>
+                    <span>{formatCurrency(currency === 'USD' ? (talent.priceUSD ?? 0) : (talent.priceZIG ?? 0), currency)}</span>
                   </div>
                 </div>
 

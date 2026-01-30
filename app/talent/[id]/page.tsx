@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { Star, Clock, CheckCircle, MessageSquare, ArrowLeft, Share2 } from 'lucide-react'
-import { mockTalentProfiles } from '@/lib/mock-data'
+import { Star, Clock, CheckCircle, MessageSquare, ArrowLeft, Share2, Zap } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { formatCurrency, formatResponseTime } from '@/lib/utils'
-import { Currency } from '@/types'
+import { Currency, TalentProfile } from '@/types'
 import { Button } from '@/components/ui/Button'
 
 export default function TalentProfilePage() {
@@ -14,8 +15,83 @@ export default function TalentProfilePage() {
   const router = useRouter()
   const [currency, setCurrency] = useState<Currency>('USD')
   const [selectedOccasion, setSelectedOccasion] = useState('')
+  const [talent, setTalent] = useState<TalentProfile | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const talent = mockTalentProfiles.find(t => t.id === params.id)
+  useEffect(() => {
+    const loadTalent = async () => {
+      if (!params.id) return
+
+      setLoading(true)
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('talent_profiles')
+          .select(`
+            *,
+            users:user_id (
+              id,
+              email,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('id', params.id)
+          .eq('admin_verified', true)
+          .single()
+
+        if (error || !data) {
+          console.error('Error fetching talent:', error)
+          setTalent(null)
+        } else {
+          // Map database fields to TalentProfile type
+          const mappedTalent: TalentProfile = {
+            id: data.id,
+            userId: data.user_id,
+            displayName: data.display_name,
+            bio: data.bio,
+            category: data.category,
+            priceUSD: data.price_usd,
+            priceZIG: data.price_zig,
+            thumbnailUrl: data.thumbnail_url,
+            profileVideoUrl: data.profile_video_url,
+            responseTimeHours: data.response_time_hours,
+            totalBookings: data.total_bookings,
+            averageRating: data.average_rating,
+            isAcceptingBookings: data.is_accepting_bookings,
+            adminVerified: data.admin_verified,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            user: data.users ? {
+              id: data.users.id,
+              email: data.users.email,
+              fullName: data.users.full_name,
+              avatarUrl: data.users.avatar_url,
+            } : undefined,
+          }
+          setTalent(mappedTalent)
+        }
+      } catch (error) {
+        console.error('Error loading talent:', error)
+        setTalent(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadTalent()
+  }, [params.id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-neutral-400">Loading talent profile...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!talent) {
     return (
@@ -78,19 +154,64 @@ export default function TalentProfilePage() {
         </div>
       </nav>
 
+      {/* Coming Soon Notice Banner */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 border-b-2 border-pink-500 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <div className="flex items-center gap-2">
+              <Zap size={24} className="text-yellow-300 animate-pulse" />
+              <span className="text-lg sm:text-xl font-bold text-white">COMING SOON</span>
+            </div>
+            <div className="text-sm sm:text-base text-white/90">
+              This is a preview website. All profiles and content are for demonstration purposes only.
+              <span className="font-semibold"> No bookings are being accepted at this time.</span>
+              <br />
+              <span className="text-xs sm:text-sm mt-2 block">
+                Any talent who does not wish to be listed or have their pictures displayed can contact our admin for immediate removal.
+              </span>
+              <Link href="/contact">
+                <button className="mt-3 px-4 py-2 bg-white text-purple-700 rounded-lg font-semibold text-sm hover:bg-gray-100 transition">
+                  Contact Admin
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Left Column - Profile Info */}
           <div className="lg:col-span-2 space-y-6">
             {/* Profile Header */}
             <div className="flex flex-col md:flex-row gap-6">
-              <div className="relative w-full md:w-48 h-64 md:h-48 rounded-xl overflow-hidden">
-                <Image
-                  src={talent.thumbnailUrl}
-                  alt={talent.displayName}
-                  fill
-                  className="object-cover"
-                />
+              <div className="relative w-full md:w-48 h-64 md:h-48 rounded-xl overflow-hidden bg-gradient-to-br from-purple-600 to-pink-600">
+                {talent.thumbnailUrl ? (
+                  <Image
+                    src={talent.thumbnailUrl}
+                    alt={talent.displayName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : talent.user?.avatarUrl ? (
+                  <Image
+                    src={talent.user.avatarUrl}
+                    alt={talent.displayName}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-6xl font-bold text-white">
+                    {talent.displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                {/* Coming Soon Overlay */}
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                  <div className="text-center">
+                    <Zap size={32} className="text-yellow-300 mx-auto mb-2 animate-pulse" />
+                    <div className="text-lg font-bold text-white">DEMO</div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex-1">

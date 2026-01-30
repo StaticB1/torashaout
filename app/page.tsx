@@ -1,99 +1,294 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, Play, Zap, ChevronRight, Shield, Clock, TrendingUp, Star } from 'lucide-react';
-import { Currency } from '@/types';
-import { mockTalentProfiles, categories } from '@/lib/mock-data';
-import { Navbar } from '@/components/Navbar';
+import {
+  Search,
+  Play,
+  Zap,
+  ChevronRight,
+  Shield,
+  Clock,
+  TrendingUp,
+  Star,
+  ChevronLeft,
+} from 'lucide-react';
+import { Currency, TalentProfile } from '@/types';
+import { categories } from '@/lib/mock-data';
+import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 import { TalentCard } from '@/components/TalentCard';
 import { Button } from '@/components/ui/Button';
+import { createClient } from '@/lib/supabase/client';
 
 export default function HomePage() {
   const [currency, setCurrency] = useState<Currency>('USD');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [talents, setTalents] = useState<TalentProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch talents from database
+  useEffect(() => {
+    async function loadTalents() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('talent_profiles')
+          .select('*')
+          .eq('admin_verified', true)
+          .eq('is_accepting_bookings', true)
+          .order('total_bookings', { ascending: false })
+          .order('average_rating', { ascending: false })
+          .limit(10);
+
+        if (error) throw error;
+
+        // Transform database response to match TalentProfile type
+        const transformedTalents: TalentProfile[] = (data || []).map((t: any) => ({
+          id: t.id,
+          userId: t.user_id,
+          displayName: t.display_name,
+          bio: t.bio,
+          category: t.category,
+          thumbnailUrl: t.thumbnail_url,
+          profileVideoUrl: t.profile_video_url,
+          priceUSD: t.price_usd,
+          priceZIG: t.price_zig,
+          isAcceptingBookings: t.is_accepting_bookings,
+          responseTimeHours: t.response_time_hours,
+          adminVerified: t.admin_verified,
+          totalBookings: t.total_bookings,
+          averageRating: t.average_rating,
+          createdAt: t.created_at,
+          updatedAt: t.updated_at,
+        }));
+        setTalents(transformedTalents);
+      } catch (error) {
+        console.error('Failed to fetch talents:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTalents();
+  }, []);
+
+  const slides = [
+    { type: 'coming-soon', src: '', title: 'COMING SOON', subtitle: 'Launching Soon' },
+    {
+      type: 'video',
+      src: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=600&fit=crop',
+      title: 'See how it works',
+      subtitle: 'Sample Video',
+    },
+    ...talents.map((talent) => ({
+      type: 'talent',
+      src: talent.thumbnailUrl || '/placeholder-talent.jpg',
+      title: talent.displayName,
+      subtitle: talent.category.charAt(0).toUpperCase() + talent.category.slice(1),
+    })),
+  ];
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const goToSlide = (index: number) => setCurrentSlide(index);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Navbar currency={currency} onCurrencyChange={setCurrency} />
+      <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+
+      {/* Coming Soon Notice Banner */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 border-b-2 border-pink-500 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+            <div className="flex items-center gap-2">
+              <Zap size={24} className="text-yellow-300 animate-pulse" />
+              <span className="text-lg sm:text-xl font-bold text-white">COMING SOON</span>
+            </div>
+            <div className="text-sm sm:text-base text-white/90">
+              This is a preview website. All profiles and content are for demonstration purposes
+              only.
+              <span className="font-semibold"> No bookings are being accepted at this time.</span>
+              <br />
+              <span className="text-xs sm:text-sm mt-2 block">
+                As we are still in the process of onboarding talent,we in discussion. Some profiles
+                and images may not represent real individuals.
+              </span>
+              <span className="text-xs sm:text-sm mt-2 block">
+                Any talent who does not wish to be listed or have their pictures displayed can
+                contact our admin for immediate removal.
+              </span>
+              <Link href="/contact">
+                <button className="mt-3 px-4 py-2 bg-white text-purple-700 rounded-lg font-semibold text-sm hover:bg-gray-100 transition">
+                  Contact Admin
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             {/* Left Content */}
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               <div className="inline-flex items-center space-x-2 bg-purple-900/30 border border-purple-700/50 rounded-full px-4 py-2">
                 <Zap size={16} className="text-pink-400" />
                 <span className="text-sm text-gray-300">Connecting Zimbabwe to the World</span>
               </div>
-              
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight">
+
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
                 Your Favorite
-                <span className="block text-gradient-brand">
-                  Stars, Delivered
-                </span>
+                <span className="block text-gradient-brand">Stars, Delivered</span>
                 Anywhere
               </h1>
 
-              <p className="text-xl text-gray-400 max-w-lg">
-                Book personalized video messages from Zimbabwe&apos;s biggest celebrities. 
-                For birthdays, graduations, or just because.
+              <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-lg">
+                Book personalized video messages from Zimbabwe&apos;s biggest celebrities. For
+                birthdays, graduations, or just because.
               </p>
 
               {/* Search Bar */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" size={20} />
-                  <input 
+                  <Search
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    size={20}
+                  />
+                  <input
                     type="text"
                     placeholder="Search for your favorite celebrity..."
                     className="w-full bg-gray-900 border border-purple-700/50 rounded-lg pl-12 pr-4 py-4 focus:outline-none focus:border-purple-500 transition"
                   />
                 </div>
-                <Button>
-                  Browse Talent
-                </Button>
+                <Link href="/browse">
+                  <Button>Browse Talent</Button>
+                </Link>
               </div>
 
               {/* Stats */}
-              <div className="flex gap-8 pt-4">
+              <div className="flex flex-wrap gap-6 sm:gap-8 pt-4">
                 <div>
-                  <div className="text-3xl font-bold text-purple-400">500+</div>
-                  <div className="text-sm text-gray-500">Verified Stars</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-400">500+</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Verified Stars</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-pink-400">10K+</div>
-                  <div className="text-sm text-gray-500">Videos Delivered</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-pink-400">10K+</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Videos Delivered</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-purple-400">4.9★</div>
-                  <div className="text-sm text-gray-500">Average Rating</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-400">4.9★</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Average Rating</div>
                 </div>
               </div>
             </div>
 
-            {/* Right Content - Featured Video */}
+            {/* Right Content - Slideshow */}
             <div className="relative">
               <div className="relative rounded-2xl overflow-hidden border border-purple-700/50">
-                <Image 
-                  src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=600&fit=crop"
-                  alt="Featured video"
-                  width={800}
-                  height={600}
-                  className="w-full h-auto"
-                />
+                {/* Slideshow */}
+                <div className="relative w-full aspect-[4/3]">
+                  {slides.map((slide, index) => (
+                    <div
+                      key={index}
+                      className={`absolute inset-0 transition-opacity duration-700 ${
+                        index === currentSlide ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      {slide.type === 'coming-soon' ? (
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex items-center justify-center">
+                          <div className="text-center px-6">
+                            <Zap size={80} className="text-yellow-300 mx-auto mb-6 animate-pulse" />
+                            <h2 className="text-5xl md:text-6xl font-bold text-white mb-4">
+                              COMING SOON
+                            </h2>
+                            <p className="text-xl text-purple-200">
+                              Zimbabwe's Premier Celebrity Video Platform
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Image
+                            src={slide.src}
+                            alt={slide.title}
+                            fill
+                            className="object-cover"
+                            priority={index === 0}
+                          />
+                          {slide.type === 'talent' && (
+                            <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center">
+                              <div className="text-center">
+                                <Zap
+                                  size={50}
+                                  className="text-yellow-300 mx-auto mb-3 animate-pulse"
+                                />
+                                <div className="text-3xl font-bold text-white">DEMO PROFILE</div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:scale-110 transition shadow-2xl">
-                  <Play size={32} fill="white" />
+
+                {/* Play button only for video slide */}
+                {slides[currentSlide]?.type === 'video' && (
+                  <button className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center hover:scale-110 transition shadow-2xl">
+                    <Play size={32} fill="white" />
+                  </button>
+                )}
+
+                {/* Navigation Arrows */}
+                <button
+                  onClick={prevSlide}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition"
+                >
+                  <ChevronLeft size={24} />
                 </button>
-                <div className="absolute bottom-6 left-6 right-6">
-                  <div className="text-sm text-gray-300 mb-1">Sample Video</div>
-                  <div className="text-2xl font-bold">See how it works</div>
+                <button
+                  onClick={nextSlide}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition"
+                >
+                  <ChevronRight size={24} />
+                </button>
+
+                {/* Slide Info */}
+                {slides[currentSlide]?.type !== 'coming-soon' && (
+                  <div className="absolute bottom-6 left-6 right-6">
+                    <div className="text-sm text-gray-300 mb-1">
+                      {slides[currentSlide].subtitle}
+                    </div>
+                    <div className="text-2xl font-bold">{slides[currentSlide].title}</div>
+                  </div>
+                )}
+
+                {/* Dots Navigation */}
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {slides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToSlide(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentSlide ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/60'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
-              
+
               {/* Floating Badge */}
               <div className="absolute -top-4 -right-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 shadow-2xl">
                 <div className="text-sm text-gray-300">Starting from</div>
@@ -104,30 +299,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-purple-950/20">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">
-            Explore by <span className="text-gradient-brand">Category</span>
-          </h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category, index) => (
-              <button 
-                key={index}
-                className="bg-gray-900 border border-purple-700/30 rounded-xl p-6 hover:border-purple-500 hover:bg-gray-800 transition group"
-              >
-                <div className="text-4xl mb-3">{category.icon}</div>
-                <div className="font-semibold mb-1">{category.name}</div>
-                <div className="text-sm text-gray-500">{category.count} talents</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Featured Talent */}
-      <section id="browse" className="py-20 px-4 sm:px-6 lg:px-8">
+      <section
+        id="browse"
+        className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-purple-950/20"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-12">
             <div>
@@ -140,11 +316,30 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockTalentProfiles.slice(0, 4).map((talent) => (
-              <TalentCard key={talent.id} talent={talent} currency={currency} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="bg-gray-900 rounded-xl h-80 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {talents.slice(0, 4).map((talent) => (
+                  <TalentCard key={talent.id} talent={talent} currency={currency} />
+                ))}
+              </div>
+
+              {/* Second Row of Featured Talent */}
+              {talents.length > 4 && (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+                  {talents.slice(4, 8).map((talent) => (
+                    <TalentCard key={talent.id} talent={talent} currency={currency} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
           <button className="md:hidden w-full mt-8 flex items-center justify-center space-x-2 text-purple-400 border border-purple-700/50 rounded-lg py-3">
             <span>View All Talent</span>
@@ -153,8 +348,33 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Categories */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-12">
+            Explore by <span className="text-gradient-brand">Category</span>
+          </h2>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categories.map((category, index) => (
+              <button
+                key={index}
+                className="bg-gray-900 border border-purple-700/30 rounded-xl p-6 hover:border-purple-500 hover:bg-gray-800 transition group"
+              >
+                <div className="text-4xl mb-3">{category.icon}</div>
+                <div className="font-semibold mb-1">{category.name}</div>
+                <div className="text-sm text-gray-500">{category.count} talents</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-purple-950/20 to-black">
+      <section
+        id="how-it-works"
+        className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-purple-950/20 to-black"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">How It Works</h2>
@@ -167,7 +387,10 @@ export default function HomePage() {
                 1
               </div>
               <h3 className="text-2xl font-bold mb-4">Choose Your Star</h3>
-              <p className="text-gray-400">Browse our catalog of verified Zimbabwean celebrities across music, comedy, gospel, and more.</p>
+              <p className="text-gray-400">
+                Browse our catalog of verified Zimbabwean celebrities across music, comedy, gospel,
+                and more.
+              </p>
             </div>
 
             <div className="text-center">
@@ -175,7 +398,10 @@ export default function HomePage() {
                 2
               </div>
               <h3 className="text-2xl font-bold mb-4">Book & Pay</h3>
-              <p className="text-gray-400">Tell us the occasion and who it&apos;s for. Pay securely with EcoCash, OneMoney, or card.</p>
+              <p className="text-gray-400">
+                Tell us the occasion and who it&apos;s for. Pay securely with EcoCash, OneMoney, or
+                card.
+              </p>
             </div>
 
             <div className="text-center">
@@ -183,7 +409,9 @@ export default function HomePage() {
                 3
               </div>
               <h3 className="text-2xl font-bold mb-4">Receive Your Video</h3>
-              <p className="text-gray-400">Get your personalized video via WhatsApp within 7 days. Download and share forever.</p>
+              <p className="text-gray-400">
+                Get your personalized video via WhatsApp within 7 days. Download and share forever.
+              </p>
             </div>
           </div>
 
@@ -192,37 +420,26 @@ export default function HomePage() {
             <div className="bg-gray-900 border border-purple-700/30 rounded-xl p-6">
               <Shield size={32} className="text-purple-400 mb-4" />
               <h3 className="text-xl font-bold mb-2">100% Verified</h3>
-              <p className="text-gray-400">Every talent is personally verified by our team. No fake accounts.</p>
+              <p className="text-gray-400">
+                Every talent is personally verified by our team. No fake accounts.
+              </p>
             </div>
 
             <div className="bg-gray-900 border border-purple-700/30 rounded-xl p-6">
               <Clock size={32} className="text-pink-400 mb-4" />
               <h3 className="text-xl font-bold mb-2">7-Day Delivery</h3>
-              <p className="text-gray-400">Your video delivered within a week, or your money back guaranteed.</p>
+              <p className="text-gray-400">
+                Your video delivered within a week, or your money back guaranteed.
+              </p>
             </div>
 
             <div className="bg-gray-900 border border-purple-700/30 rounded-xl p-6">
               <TrendingUp size={32} className="text-purple-400 mb-4" />
               <h3 className="text-xl font-bold mb-2">Dual Currency</h3>
-              <p className="text-gray-400">Pay in USD or ZIG. Perfect for diaspora and local fans.</p>
+              <p className="text-gray-400">
+                Pay in USD or ZIG. Perfect for diaspora and local fans.
+              </p>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-2xl p-12">
-            <h2 className="text-4xl font-bold mb-4">Ready to Make Someone&apos;s Day?</h2>
-            <p className="text-xl text-gray-300 mb-8">
-              Over 10,000 videos delivered. Join thousands of happy customers worldwide.
-            </p>
-            <Link href="/browse">
-              <Button size="lg">
-                Browse All Talent
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
@@ -243,7 +460,9 @@ export default function HomePage() {
               </h2>
 
               <p className="text-xl text-gray-400">
-                Join Zimbabwe&apos;s top talent on ToraShaout and earn money by creating personalized video messages for your fans. Set your own prices and work on your schedule.
+                Join Zimbabwe&apos;s top talent on ToraShaout and earn money by creating
+                personalized video messages for your fans. Set your own prices and work on your
+                schedule.
               </p>
 
               <div className="grid sm:grid-cols-2 gap-4">
@@ -253,7 +472,9 @@ export default function HomePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Earn Extra Income</h3>
-                    <p className="text-sm text-gray-400">Set your own rates and get paid for every video</p>
+                    <p className="text-sm text-gray-400">
+                      Set your own rates and get paid for every video
+                    </p>
                   </div>
                 </div>
 
@@ -290,9 +511,7 @@ export default function HomePage() {
 
               <div className="flex flex-wrap gap-4 pt-4">
                 <Link href="/join">
-                  <Button size="lg">
-                    Apply to Join
-                  </Button>
+                  <Button size="lg">Apply to Join</Button>
                 </Link>
                 <Link href="/join">
                   <Button size="lg" variant="outline">
@@ -326,7 +545,8 @@ export default function HomePage() {
 
               <div className="mt-8 pt-8 border-t border-purple-700/50">
                 <p className="text-center text-gray-300 mb-4 italic">
-                  "ToraShaout has completely changed how I connect with my fans. I&apos;ve made over $5,000 in just three months!"
+                  &quot;ToraShaout has completely changed how I connect with my fans. I&apos;ve made
+                  over $5,000 in just three months!&quot;
                 </p>
                 <div className="text-center">
                   <div className="font-semibold">Winky D</div>
@@ -334,6 +554,21 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-2xl p-12">
+            <h2 className="text-4xl font-bold mb-4">Ready to Make Someone&apos;s Day?</h2>
+            <p className="text-xl text-gray-300 mb-8">
+              Over 10,000 videos delivered. Join thousands of happy customers worldwide.
+            </p>
+            <Link href="/browse">
+              <Button size="lg">Browse All Talent</Button>
+            </Link>
           </div>
         </div>
       </section>
