@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { CheckCircle, Download, Share2, ArrowRight, Clock, Mail } from 'lucide-react';
+import { CheckCircle, Download, Share2, ArrowRight, Clock, Mail, AlertCircle } from 'lucide-react';
 import { AuthNavbar } from '@/components/AuthNavbar';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/Button';
@@ -15,34 +15,66 @@ function BookingConfirmationContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [bookingDetails, setBookingDetails] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const paymentRef = searchParams.get('ref');
   const bookingId = searchParams.get('booking');
 
   useEffect(() => {
-    // Simulate fetching booking details
-    // In production, this would fetch from the API
-    setTimeout(() => {
-      setBookingDetails({
-        id: bookingId || 'BK-12345',
-        paymentReference: paymentRef || 'PAY-12345',
-        talentName: 'Winky D',
-        talentImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop',
-        amount: 50,
-        currency: 'USD',
-        occasion: 'Birthday',
-        recipientName: 'John Doe',
-        deliveryEmail: 'john@example.com',
-        expectedDelivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-        status: 'confirmed',
-      });
-      setLoading(false);
-    }, 1000);
+    const fetchBookingDetails = async () => {
+      if (!bookingId) {
+        setError('No booking ID provided');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch real booking data from API
+        const response = await fetch(`/api/bookings/${bookingId}`, {
+          credentials: 'include',
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to fetch booking details');
+        }
+
+        const booking = data.data;
+        const talent = booking.talent;
+
+        // Calculate expected delivery based on talent's response time
+        const responseTimeHours = talent?.response_time_hours || 48;
+        const expectedDeliveryDate = new Date(Date.now() + responseTimeHours * 60 * 60 * 1000);
+
+        setBookingDetails({
+          id: booking.id,
+          bookingCode: booking.booking_code,
+          paymentReference: paymentRef || booking.booking_code,
+          talentName: talent?.display_name || 'Talent',
+          talentImage: talent?.thumbnail_url || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop',
+          amount: booking.amount_paid,
+          currency: booking.currency,
+          occasion: booking.occasion,
+          recipientName: booking.recipient_name,
+          instructions: booking.instructions,
+          expectedDelivery: expectedDeliveryDate.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          status: booking.status,
+        });
+      } catch (err: any) {
+        console.error('Error fetching booking:', err);
+        setError(err.message || 'Failed to load booking details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookingDetails();
   }, [bookingId, paymentRef]);
 
   if (loading) {
@@ -52,6 +84,36 @@ function BookingConfirmationContent() {
           <div className="w-16 h-16 bg-purple-600 rounded-full mx-auto mb-4"></div>
           <p className="text-gray-400">Loading booking details...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error || !bookingDetails) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <AuthNavbar />
+        <div className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-900/30 border-2 border-red-500 mb-4">
+              <AlertCircle size={48} className="text-red-400" />
+            </div>
+            <h1 className="text-3xl font-bold mb-4">Unable to Load Booking</h1>
+            <p className="text-gray-400 mb-6">{error || 'Booking details not found'}</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/dashboard">
+                <Button variant="primary" size="lg">
+                  Go to Dashboard
+                </Button>
+              </Link>
+              <Link href="/browse">
+                <Button variant="outline" size="lg">
+                  Browse Talents
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -101,10 +163,6 @@ function BookingConfirmationContent() {
               <div className="flex justify-between">
                 <span className="text-gray-400">Recipient</span>
                 <span className="text-white font-semibold">{bookingDetails.recipientName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Delivery Email</span>
-                <span className="text-white font-semibold">{bookingDetails.deliveryEmail}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Amount Paid</span>

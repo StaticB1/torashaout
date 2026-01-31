@@ -208,7 +208,7 @@ function DashboardContent() {
   const tabs = [
     { id: 'overview' as TabType, label: 'Overview', icon: LayoutDashboard },
     { id: 'requests' as TabType, label: 'Requests', icon: Video, badge: stats?.pendingRequests },
-    { id: 'my-orders' as TabType, label: 'My Orders', icon: Star },
+    { id: 'my-orders' as TabType, label: 'My Orders', icon: Star, badge: customerPendingBookings?.length },
     { id: 'earnings' as TabType, label: 'Earnings', icon: Wallet },
     { id: 'settings' as TabType, label: 'Settings', icon: Settings },
   ];
@@ -237,8 +237,8 @@ function DashboardContent() {
     );
   }
 
-  // Show error state
-  if (error) {
+  // Show error state only for talent users (fans don't need a talent profile)
+  if (error && isTalent) {
     return (
       <div className="min-h-screen bg-black text-white">
         <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
@@ -248,6 +248,24 @@ function DashboardContent() {
             <h2 className="text-xl font-bold mb-2">Unable to load dashboard</h2>
             <p className="text-neutral-400 mb-4">{error}</p>
             <Button onClick={refresh}>Try Again</Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show error state for customer bookings (for fans)
+  if (customerBookingsError && !isTalent) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <AuthNavbar currency={currency} onCurrencyChange={setCurrency} />
+        <div className="container mx-auto px-4 py-8 pt-24">
+          <div className="bg-red-900/20 border border-red-700/50 rounded-xl p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Unable to load your orders</h2>
+            <p className="text-neutral-400 mb-4">{customerBookingsError}</p>
+            <Button onClick={refreshCustomerBookings}>Try Again</Button>
           </div>
         </div>
         <Footer />
@@ -805,6 +823,12 @@ function DashboardContent() {
                         <div className="flex items-center justify-between">
                           <span className="text-green-400 font-semibold">{formatCurrency(request.amount_paid)}</span>
                           <div className="flex gap-2">
+                            <Link href={`/booking/${request.booking_code}`}>
+                              <Button size="sm" variant="outline" className="text-xs">
+                                <Eye className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                            </Link>
                             <Button size="sm" variant="outline" className="text-xs">
                               Decline
                             </Button>
@@ -962,6 +986,12 @@ function DashboardContent() {
                         <p className="text-2xl font-bold text-green-400">{formatCurrency(request.amount_paid)}</p>
                         <p className="text-sm text-neutral-400">You earn: {formatCurrency(request.talent_earnings)}</p>
                         <div className="flex gap-2">
+                          <Link href={`/booking/${request.booking_code}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View Details
+                            </Button>
+                          </Link>
                           <Button variant="outline" size="sm">
                             <XCircle className="w-4 h-4 mr-1" />
                             Decline
@@ -998,7 +1028,7 @@ function DashboardContent() {
                           <p className="text-sm text-neutral-400">{request.occasion || 'General'} • {request.booking_code}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-4">
                         {request.customer_rating && (
                           <div className="flex items-center gap-1">
                             {[...Array(request.customer_rating)].map((_, i) => (
@@ -1007,10 +1037,16 @@ function DashboardContent() {
                           </div>
                         )}
                         <span className="text-green-400 font-semibold">{formatCurrency(request.talent_earnings)}</span>
+                        <Link href={`/booking/${request.booking_code}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Details
+                          </Button>
+                        </Link>
                         {request.video_url && (
                           <Button variant="outline" size="sm">
                             <Play className="w-4 h-4 mr-1" />
-                            View
+                            Play
                           </Button>
                         )}
                       </div>
@@ -1022,10 +1058,10 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* My Orders Tab - Bookings where talent is the customer */}
+        {/* My Orders Tab - Videos I ordered from other talents (as a customer) */}
         {activeTab === 'my-orders' && (
           <div className="space-y-6">
-            {/* Stats for My Orders */}
+            {/* Stats for orders I placed as customer */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-neutral-900 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -1033,7 +1069,7 @@ function DashboardContent() {
                     <Video className="w-5 h-5 text-purple-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold">{customerStats?.totalOrders ?? 0}</p>
+                <p className="text-2xl font-bold">{(customerBookings?.length ?? 0)}</p>
                 <p className="text-sm text-neutral-400">Total Orders</p>
               </div>
 
@@ -1043,8 +1079,8 @@ function DashboardContent() {
                     <Clock className="w-5 h-5 text-yellow-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold">{customerStats?.pendingOrders ?? 0}</p>
-                <p className="text-sm text-neutral-400">Pending</p>
+                <p className="text-2xl font-bold">{(customerPendingBookings?.length ?? 0)}</p>
+                <p className="text-sm text-neutral-400">In Progress</p>
               </div>
 
               <div className="bg-neutral-900 rounded-xl p-6">
@@ -1053,7 +1089,7 @@ function DashboardContent() {
                     <CheckCircle className="w-5 h-5 text-green-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold">{customerStats?.completedOrders ?? 0}</p>
+                <p className="text-2xl font-bold">{(customerCompletedBookings?.length ?? 0)}</p>
                 <p className="text-sm text-neutral-400">Completed</p>
               </div>
 
@@ -1068,7 +1104,7 @@ function DashboardContent() {
               </div>
             </div>
 
-            {/* Active Orders */}
+            {/* Active Orders - Videos I ordered from other talents */}
             <div className="bg-neutral-900 rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold">Active Orders</h2>
@@ -1084,14 +1120,14 @@ function DashboardContent() {
                   <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
                 </div>
               ) : (customerPendingBookings?.length ?? 0) === 0 ? (
-                <div className="text-center py-12">
-                  <Video className="w-16 h-16 mx-auto mb-4 text-neutral-600" />
-                  <h3 className="text-xl font-bold mb-2">No active orders</h3>
-                  <p className="text-neutral-400 mb-6">Book personalized videos from other amazing talents!</p>
-                  <Link href="/browse">
+                <div className="text-center py-8 text-neutral-400">
+                  <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No active orders</p>
+                  <p className="text-sm mt-1">Order personalized videos from other talents!</p>
+                  <Link href="/browse" className="inline-block mt-4">
                     <Button className="bg-gradient-to-r from-purple-600 to-pink-600">
                       <Star className="w-4 h-4 mr-2" />
-                      Discover Talent
+                      Browse Talent
                     </Button>
                   </Link>
                 </div>
@@ -1159,7 +1195,7 @@ function DashboardContent() {
               )}
             </div>
 
-            {/* Order History */}
+            {/* Order History - Completed orders placed as customer */}
             {(customerCompletedBookings?.length ?? 0) > 0 && (
               <div className="bg-neutral-900 rounded-xl p-6">
                 <h2 className="text-xl font-bold mb-6">Order History</h2>

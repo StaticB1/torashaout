@@ -214,8 +214,10 @@ export interface Database {
         Row: {
           id: string;
           booking_id: string;
+          user_id: string;
           gateway: 'paynow' | 'stripe' | 'innbucks';
           gateway_transaction_id: string | null;
+          reference: string | null;
           amount: number;
           currency: 'USD' | 'ZIG';
           status: 'pending' | 'completed' | 'failed' | 'refunded';
@@ -226,8 +228,10 @@ export interface Database {
         Insert: {
           id?: string;
           booking_id: string;
+          user_id: string;
           gateway: 'paynow' | 'stripe' | 'innbucks';
           gateway_transaction_id?: string | null;
+          reference?: string | null;
           amount: number;
           currency: 'USD' | 'ZIG';
           status?: 'pending' | 'completed' | 'failed' | 'refunded';
@@ -238,8 +242,10 @@ export interface Database {
         Update: {
           id?: string;
           booking_id?: string;
+          user_id?: string;
           gateway?: 'paynow' | 'stripe' | 'innbucks';
           gateway_transaction_id?: string | null;
+          reference?: string | null;
           amount?: number;
           currency?: 'USD' | 'ZIG';
           status?: 'pending' | 'completed' | 'failed' | 'refunded';
@@ -367,6 +373,7 @@ export interface Database {
       talent_applications: {
         Row: {
           id: string;
+          user_id: string | null;
           first_name: string;
           last_name: string;
           stage_name: string;
@@ -404,6 +411,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          user_id?: string | null;
           first_name: string;
           last_name: string;
           stage_name: string;
@@ -441,6 +449,7 @@ export interface Database {
         };
         Update: {
           id?: string;
+          user_id?: string | null;
           first_name?: string;
           last_name?: string;
           stage_name?: string;

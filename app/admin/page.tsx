@@ -432,22 +432,27 @@ function AdminPanelContent() {
                 </div>
                 <div className="space-y-3">
                   {recentBookings.map((booking) => (
-                    <div key={booking.id} className="bg-black/50 rounded-lg p-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-sm">{booking.bookingCode}</p>
-                        <p className="text-xs text-neutral-400">{booking.customerName} → {booking.talentName}</p>
+                    <Link key={booking.id} href={`/booking/${booking.bookingCode}`} className="block">
+                      <div className="bg-black/50 rounded-lg p-4 flex items-center justify-between hover:bg-black/70 transition cursor-pointer">
+                        <div>
+                          <p className="font-semibold text-sm">{booking.bookingCode}</p>
+                          <p className="text-xs text-neutral-400">{booking.customerName} → {booking.talentName}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-semibold text-sm">${booking.amount}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              booking.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                              booking.status === 'in_progress' ? 'bg-purple-500/20 text-purple-400' :
+                              'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              {booking.status}
+                            </span>
+                          </div>
+                          <Eye className="w-4 h-4 text-neutral-500" />
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-sm">${booking.amount}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          booking.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                          booking.status === 'in_progress' ? 'bg-purple-500/20 text-purple-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {booking.status}
-                        </span>
-                      </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -791,9 +796,12 @@ function AdminPanelContent() {
                         </td>
                         <td className="py-4 text-sm text-neutral-400">{formatDate(booking.createdAt)}</td>
                         <td className="py-4">
-                          <Button size="sm" variant="outline">
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <Link href={`/booking/${booking.bookingCode}`}>
+                            <Button size="sm" variant="outline">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </Link>
                         </td>
                       </tr>
                     ))}

@@ -1,5 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { SupabaseClient } from '@supabase/supabase-js';
+
+// Helper function to enrich booking data with customer and payment info for admins
+async function enrichBookingForAdmin(supabase: SupabaseClient, booking: BookingWithTalent): Promise<BookingWithTalent> {
+  // Fetch customer details
+  const { data: customerData } = await supabase
+    .from('users')
+    .select('id, full_name, email, phone')
+    .eq('id', booking.customer_id)
+    .single();
+
+  // Fetch payment details
+  const { data: paymentData } = await supabase
+    .from('payments')
+    .select('id, gateway, reference, status, created_at')
+    .eq('booking_id', booking.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  return {
+    ...booking,
+    customer: customerData ? {
+      id: customerData.id,
+      full_name: customerData.full_name,
+      email: customerData.email,
+      phone: customerData.phone,
+    } : undefined,
+    payment: paymentData ? {
+      id: paymentData.id,
+      gateway: paymentData.gateway,
+      reference: paymentData.reference,
+      status: paymentData.status,
+      created_at: paymentData.created_at,
+    } : undefined,
+  };
+}
 
 // Database types for bookings with relations
 interface BookingWithTalent {
@@ -28,6 +65,19 @@ interface BookingWithTalent {
     thumbnail_url: string | null;
     category: string;
     response_time_hours: number;
+  };
+  customer?: {
+    id: string;
+    full_name: string | null;
+    email: string;
+    phone: string | null;
+  };
+  payment?: {
+    id: string;
+    gateway: string;
+    reference: string | null;
+    status: string;
+    created_at: string;
   };
 }
 
@@ -120,6 +170,13 @@ export async function GET(
               { status: 403 }
             );
           }
+
+          // Fetch additional data for admin
+          const enrichedBooking = await enrichBookingForAdmin(supabase, bookingById);
+          return NextResponse.json({
+            success: true,
+            data: enrichedBooking,
+          });
         }
       }
 
@@ -152,6 +209,13 @@ export async function GET(
             { status: 403 }
           );
         }
+
+        // Fetch additional data for admin
+        const enrichedBooking = await enrichBookingForAdmin(supabase, booking);
+        return NextResponse.json({
+          success: true,
+          data: enrichedBooking,
+        });
       }
     }
 

@@ -199,12 +199,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
-    // Fetch user's bookings (as customer)
+    // Fetch user's bookings (as customer) - works for both fans AND talents ordering videos
     let query = supabase
       .from('bookings')
       .select(`
         *,
-        talent:talent_profiles(id, display_name, thumbnail_url, category)
+        talent:talent_profiles(id, display_name, thumbnail_url, category, response_time_hours)
       `)
       .eq('customer_id', user.id)
       .order('created_at', { ascending: false });

@@ -459,31 +459,39 @@ function CustomerDashboardContent() {
                       const badge = getStatusBadge(booking.status);
                       const talentImage = booking.talent?.thumbnail_url || booking.talent?.users?.avatar_url;
                       return (
-                        <div key={booking.id} className="bg-black/50 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            {talentImage ? (
-                              <Image
-                                src={talentImage}
-                                alt={booking.talent?.display_name || 'Talent'}
-                                width={48}
-                                height={48}
-                                className="w-12 h-12 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
-                                <User className="w-6 h-6" />
+                        <Link key={booking.id} href={`/booking/${booking.booking_code}`} className="block">
+                          <div className="bg-black/50 rounded-lg p-4 hover:bg-black/70 transition cursor-pointer">
+                            <div className="flex items-start gap-3">
+                              {talentImage ? (
+                                <Image
+                                  src={talentImage}
+                                  alt={booking.talent?.display_name || 'Talent'}
+                                  width={48}
+                                  height={48}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                                  <User className="w-6 h-6" />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <p className="font-semibold">{booking.talent?.display_name || 'Unknown Talent'}</p>
+                                <p className="text-sm text-neutral-400">For: {booking.recipient_name}</p>
+                                <p className="text-xs text-neutral-500 mt-1">{booking.booking_code}</p>
                               </div>
-                            )}
-                            <div className="flex-1">
-                              <p className="font-semibold">{booking.talent?.display_name || 'Unknown Talent'}</p>
-                              <p className="text-sm text-neutral-400">For: {booking.recipient_name}</p>
-                              <p className="text-xs text-neutral-500 mt-1">{booking.booking_code}</p>
+                              <div className="flex flex-col items-end gap-2">
+                                <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>
+                                  {badge.label}
+                                </span>
+                                <Button size="sm" variant="outline">
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View Details
+                                </Button>
+                              </div>
                             </div>
-                            <span className={`px-2 py-1 text-xs rounded-full ${badge.bg} ${badge.text}`}>
-                              {badge.label}
-                            </span>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>
@@ -683,6 +691,12 @@ function CustomerDashboardContent() {
                         </div>
                         <div className="flex flex-col items-end gap-3">
                           <p className="text-xl font-bold">{formatCurrency(booking.amount_paid)}</p>
+                          <Link href={`/booking/${booking.booking_code}`}>
+                            <Button size="sm" variant="outline">
+                              <Eye className="w-4 h-4 mr-1" />
+                              View Details
+                            </Button>
+                          </Link>
                           {booking.status === 'completed' && booking.video_url && (
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline">
