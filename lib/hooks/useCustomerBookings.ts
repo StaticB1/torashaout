@@ -95,7 +95,7 @@ export function useCustomerBookings(): UseCustomerBookingsReturn {
   );
 
   const completedBookings = bookings.filter(
-    (b) => ['completed', 'delivered'].includes(b.status)
+    (b) => ['completed', 'delivered', 'cancelled', 'refunded'].includes(b.status)
   );
 
   // Calculate stats

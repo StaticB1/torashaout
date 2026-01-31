@@ -27,7 +27,12 @@ import {
   Eye,
   ArrowUpRight,
   ArrowDownRight,
-  Loader2
+  Loader2,
+  X,
+  Banknote,
+  Smartphone,
+  Building2,
+  ExternalLink
 } from 'lucide-react';
 import { Currency, BookingStatus } from '@/types';
 import { AuthNavbar } from '@/components/AuthNavbar';
@@ -60,6 +65,15 @@ function DashboardContent() {
   // Customer application state
   const [myApplication, setMyApplication] = useState<TalentApplication | null>(null);
   const [loadingApplication, setLoadingApplication] = useState(true);
+
+  // Payout state
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState<'ecocash' | 'innbucks' | 'bank_transfer'>('ecocash');
+  const [payoutAccount, setPayoutAccount] = useState('');
+  const [requestingPayout, setRequestingPayout] = useState(false);
+  const [payoutHistory, setPayoutHistory] = useState<any[]>([]);
+  const [loadingPayouts, setLoadingPayouts] = useState(false);
 
   const { user, profile } = useAuth();
   const {
@@ -202,6 +216,102 @@ function DashboardContent() {
       toast.error('Failed to save settings');
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Load payout history when earnings tab is active
+  useEffect(() => {
+    const loadPayoutHistory = async () => {
+      if (activeTab === 'earnings' && isTalent) {
+        setLoadingPayouts(true);
+        try {
+          const response = await fetch('/api/payouts', { credentials: 'include' });
+          const data = await response.json();
+          if (data.success) {
+            setPayoutHistory(data.data || []);
+          }
+        } catch (err) {
+          console.error('Error loading payout history:', err);
+        } finally {
+          setLoadingPayouts(false);
+        }
+      }
+    };
+    loadPayoutHistory();
+  }, [activeTab, isTalent]);
+
+  const handleRequestPayout = async () => {
+    const amount = parseFloat(payoutAmount);
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    const availableBalance = stats?.totalEarnings || 0;
+    if (amount > availableBalance) {
+      toast.error(`Insufficient balance. Available: $${availableBalance.toFixed(2)}`);
+      return;
+    }
+
+    if (!payoutAccount.trim()) {
+      toast.error('Please enter your account details');
+      return;
+    }
+
+    setRequestingPayout(true);
+    try {
+      const response = await fetch('/api/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount,
+          currency: 'USD',
+          payment_method: payoutMethod,
+          account_details: payoutAccount,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to request payout');
+      }
+
+      toast.success('Payout request submitted! You will receive your funds shortly.');
+      setShowPayoutModal(false);
+      setPayoutAmount('');
+      setPayoutAccount('');
+
+      // Refresh payout history
+      const historyResponse = await fetch('/api/payouts', { credentials: 'include' });
+      const historyData = await historyResponse.json();
+      if (historyData.success) {
+        setPayoutHistory(historyData.data || []);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to request payout');
+    } finally {
+      setRequestingPayout(false);
+    }
+  };
+
+  const getPayoutMethodLabel = (method: string) => {
+    switch (method) {
+      case 'ecocash': return 'EcoCash';
+      case 'innbucks': return 'InnBucks';
+      case 'bank_transfer': return 'Bank Transfer';
+      default: return method;
+    }
+  };
+
+  const getPayoutStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-500/20 text-green-400';
+      case 'processing': return 'bg-blue-500/20 text-blue-400';
+      case 'pending': return 'bg-yellow-500/20 text-yellow-400';
+      case 'failed': return 'bg-red-500/20 text-red-400';
+      default: return 'bg-neutral-500/20 text-neutral-400';
     }
   };
 
@@ -1292,11 +1402,62 @@ function DashboardContent() {
               <div className="bg-neutral-900 rounded-xl p-6">
                 <p className="text-neutral-400 mb-2">Available for Payout</p>
                 <p className="text-4xl font-bold">{formatCurrency(stats?.totalEarnings || 0)}</p>
-                <Button className="mt-4 w-full" size="sm">
-                  <Download className="w-4 h-4 mr-2" />
+                <Button
+                  className="mt-4 w-full"
+                  size="sm"
+                  onClick={() => setShowPayoutModal(true)}
+                  disabled={(stats?.totalEarnings || 0) <= 0}
+                >
+                  <Banknote className="w-4 h-4 mr-2" />
                   Request Payout
                 </Button>
               </div>
+            </div>
+
+            {/* Payout History */}
+            <div className="bg-neutral-900 rounded-xl p-6">
+              <h2 className="text-xl font-bold mb-6">Payout History</h2>
+              {loadingPayouts ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+                </div>
+              ) : payoutHistory.length === 0 ? (
+                <div className="text-center py-8 text-neutral-400">
+                  <Banknote className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No payout history</p>
+                  <p className="text-sm">Request a payout to see it here</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {payoutHistory.map((payout) => (
+                    <div key={payout.id} className="bg-black/50 rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          payout.payment_method === 'bank_transfer' ? 'bg-blue-500/20' : 'bg-green-500/20'
+                        }`}>
+                          {payout.payment_method === 'bank_transfer' ? (
+                            <Building2 className="w-5 h-5 text-blue-400" />
+                          ) : (
+                            <Smartphone className="w-5 h-5 text-green-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{getPayoutMethodLabel(payout.payment_method)}</p>
+                          <p className="text-sm text-neutral-400">
+                            {payout.reference} • {new Date(payout.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg">{formatCurrency(payout.amount)}</p>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${getPayoutStatusColor(payout.status)}`}>
+                          {payout.status.charAt(0).toUpperCase() + payout.status.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Recent Earnings */}
@@ -1450,6 +1611,137 @@ function DashboardContent() {
           </div>
         )}
       </div>
+
+      {/* Payout Request Modal */}
+      {showPayoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setShowPayoutModal(false)} />
+          <div className="relative bg-neutral-900 rounded-xl p-6 w-full max-w-md mx-4 border border-neutral-800">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">Request Payout</h2>
+              <button
+                onClick={() => setShowPayoutModal(false)}
+                className="text-neutral-400 hover:text-white transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Available Balance */}
+              <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 border border-purple-700/50 rounded-lg p-4">
+                <p className="text-sm text-neutral-400 mb-1">Available Balance</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats?.totalEarnings || 0)}</p>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Amount to Withdraw</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">$</span>
+                  <input
+                    type="number"
+                    value={payoutAmount}
+                    onChange={(e) => setPayoutAmount(e.target.value)}
+                    placeholder="0.00"
+                    max={stats?.totalEarnings || 0}
+                    className="w-full bg-black/50 border border-neutral-700 rounded-lg pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <button
+                  onClick={() => setPayoutAmount(String(stats?.totalEarnings || 0))}
+                  className="text-sm text-purple-400 hover:text-purple-300 mt-1"
+                >
+                  Withdraw all
+                </button>
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Payment Method</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => setPayoutMethod('ecocash')}
+                    className={`p-3 rounded-lg border transition flex flex-col items-center gap-1 ${
+                      payoutMethod === 'ecocash'
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-neutral-700 hover:border-neutral-600'
+                    }`}
+                  >
+                    <Smartphone className={`w-5 h-5 ${payoutMethod === 'ecocash' ? 'text-green-400' : 'text-neutral-400'}`} />
+                    <span className="text-xs">EcoCash</span>
+                  </button>
+                  <button
+                    onClick={() => setPayoutMethod('innbucks')}
+                    className={`p-3 rounded-lg border transition flex flex-col items-center gap-1 ${
+                      payoutMethod === 'innbucks'
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-neutral-700 hover:border-neutral-600'
+                    }`}
+                  >
+                    <Smartphone className={`w-5 h-5 ${payoutMethod === 'innbucks' ? 'text-purple-400' : 'text-neutral-400'}`} />
+                    <span className="text-xs">InnBucks</span>
+                  </button>
+                  <button
+                    onClick={() => setPayoutMethod('bank_transfer')}
+                    className={`p-3 rounded-lg border transition flex flex-col items-center gap-1 ${
+                      payoutMethod === 'bank_transfer'
+                        ? 'border-blue-500 bg-blue-500/10'
+                        : 'border-neutral-700 hover:border-neutral-600'
+                    }`}
+                  >
+                    <Building2 className={`w-5 h-5 ${payoutMethod === 'bank_transfer' ? 'text-blue-400' : 'text-neutral-400'}`} />
+                    <span className="text-xs">Bank</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Account Details */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  {payoutMethod === 'bank_transfer' ? 'Account Number' : 'Phone Number'}
+                </label>
+                <input
+                  type="text"
+                  value={payoutAccount}
+                  onChange={(e) => setPayoutAccount(e.target.value)}
+                  placeholder={payoutMethod === 'bank_transfer' ? 'Enter bank account number' : 'Enter phone number (e.g., 0771234567)'}
+                  className="w-full bg-black/50 border border-neutral-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Processing Time Notice */}
+              <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
+                <p className="text-sm text-blue-300">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  {payoutMethod === 'bank_transfer'
+                    ? 'Bank transfers take 2-3 business days'
+                    : 'Mobile money payouts are processed within 1-2 hours'}
+                </p>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                onClick={handleRequestPayout}
+                disabled={requestingPayout || !payoutAmount || !payoutAccount}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+              >
+                {requestingPayout ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Banknote className="w-4 h-4 mr-2" />
+                    Request Payout
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

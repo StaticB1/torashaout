@@ -402,61 +402,166 @@ export default function BookingPage() {
           {/* Timeline */}
           <div className="bg-neutral-900 rounded-xl p-6 mt-6">
             <h2 className="text-xl font-bold mb-6">Order Timeline</h2>
-            <div className="space-y-6">
-              <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="flex-1 pb-6 border-l-2 border-neutral-800 -ml-4 pl-8">
-                  <div className="font-semibold mb-1">Booking Created</div>
-                  <div className="text-sm text-neutral-400">
-                    {new Date(booking.created_at).toLocaleString()}
-                  </div>
-                </div>
-              </div>
+            <div className="relative">
+              {/* Vertical connecting line */}
+              <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-neutral-800" />
 
-              <div className="flex gap-4">
-                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="flex-1 pb-6 border-l-2 border-neutral-800 -ml-4 pl-8">
-                  <div className="font-semibold mb-1">Payment Confirmed</div>
-                  <div className="text-sm text-neutral-400">
-                    Payment processed successfully
+              <div className="space-y-0">
+                {/* Step 1: Booking Created - Always completed */}
+                <div className="flex gap-4 relative">
+                  <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 z-10">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div className="flex-1 pb-8">
+                    <div className="font-semibold mb-1">Booking Created</div>
+                    <div className="text-sm text-neutral-400">
+                      {new Date(booking.created_at).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-4">
-                <div className={`w-8 h-8 rounded-full ${booking.status === 'in_progress' || booking.status === 'completed' ? 'bg-purple-500/20' : 'bg-neutral-800'} flex items-center justify-center flex-shrink-0 ${booking.status === 'in_progress' ? 'animate-pulse' : ''}`}>
-                  <Video className={`w-5 h-5 ${booking.status === 'in_progress' || booking.status === 'completed' ? 'text-purple-400' : 'text-neutral-600'}`} />
-                </div>
-                <div className="flex-1 pb-6 -ml-4 pl-8">
-                  <div className={`font-semibold mb-1 ${booking.status === 'payment_confirmed' ? 'text-neutral-500' : ''}`}>
-                    {booking.status === 'in_progress' ? 'In Progress' : booking.status === 'completed' ? 'Video Created' : 'Awaiting Video'}
+                {/* Step 2: Payment */}
+                <div className="flex gap-4 relative">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+                    booking.status === 'pending_payment'
+                      ? 'bg-yellow-500/20'
+                      : 'bg-green-500/20'
+                  }`}>
+                    {booking.status === 'pending_payment' ? (
+                      <Clock className="w-5 h-5 text-yellow-400" />
+                    ) : (
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                    )}
                   </div>
-                  <div className="text-sm text-neutral-400">
-                    {booking.status === 'in_progress' || booking.status === 'completed'
-                      ? `${booking.talent.display_name} is creating your video`
-                      : 'Talent will start soon'}
+                  <div className="flex-1 pb-8">
+                    <div className={`font-semibold mb-1 ${booking.status === 'pending_payment' ? 'text-yellow-400' : ''}`}>
+                      {booking.status === 'pending_payment' ? 'Awaiting Payment' : 'Payment Confirmed'}
+                    </div>
+                    <div className="text-sm text-neutral-400">
+                      {booking.status === 'pending_payment'
+                        ? 'Complete payment to proceed'
+                        : booking.payment?.created_at
+                          ? new Date(booking.payment.created_at).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : 'Payment processed successfully'
+                      }
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-4">
-                <div className={`w-8 h-8 rounded-full ${booking.status === 'completed' ? 'bg-green-500/20' : 'bg-neutral-800'} flex items-center justify-center flex-shrink-0`}>
-                  <Mail className={`w-5 h-5 ${booking.status === 'completed' ? 'text-green-400' : 'text-neutral-600'}`} />
-                </div>
-                <div className="flex-1 -ml-4 pl-8">
-                  <div className={`font-semibold mb-1 ${booking.status !== 'completed' ? 'text-neutral-500' : ''}`}>
-                    {booking.status === 'completed' ? 'Delivered' : 'Delivery'}
+                {/* Step 3: In Progress (only show if not cancelled/refunded) */}
+                {booking.status !== 'cancelled' && booking.status !== 'refunded' && (
+                  <div className="flex gap-4 relative">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+                      booking.status === 'in_progress'
+                        ? 'bg-purple-500/20 animate-pulse'
+                        : booking.status === 'completed'
+                          ? 'bg-green-500/20'
+                          : 'bg-neutral-800'
+                    }`}>
+                      <Video className={`w-5 h-5 ${
+                        booking.status === 'in_progress'
+                          ? 'text-purple-400'
+                          : booking.status === 'completed'
+                            ? 'text-green-400'
+                            : 'text-neutral-600'
+                      }`} />
+                    </div>
+                    <div className="flex-1 pb-8">
+                      <div className={`font-semibold mb-1 ${
+                        booking.status === 'pending_payment' || booking.status === 'payment_confirmed'
+                          ? 'text-neutral-500'
+                          : booking.status === 'in_progress'
+                            ? 'text-purple-400'
+                            : ''
+                      }`}>
+                        {booking.status === 'completed'
+                          ? 'Video Created'
+                          : booking.status === 'in_progress'
+                            ? 'Creating Video...'
+                            : 'Video Creation'}
+                      </div>
+                      <div className="text-sm text-neutral-400">
+                        {booking.status === 'in_progress'
+                          ? `${booking.talent.display_name} is working on your video`
+                          : booking.status === 'completed'
+                            ? `Created by ${booking.talent.display_name}`
+                            : 'Talent will start after payment'}
+                      </div>
+                    </div>
                   </div>
-                  <div className={`text-sm ${booking.status === 'completed' ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                    {booking.status === 'completed'
-                      ? `Delivered on ${new Date(booking.completed_at || '').toLocaleString()}`
-                      : `Estimated delivery within ${hoursRemaining}h`}
+                )}
+
+                {/* Step 4: Delivery (only show if not cancelled/refunded) */}
+                {booking.status !== 'cancelled' && booking.status !== 'refunded' && (
+                  <div className="flex gap-4 relative">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+                      booking.status === 'completed' ? 'bg-green-500/20' : 'bg-neutral-800'
+                    }`}>
+                      <Mail className={`w-5 h-5 ${booking.status === 'completed' ? 'text-green-400' : 'text-neutral-600'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className={`font-semibold mb-1 ${booking.status !== 'completed' ? 'text-neutral-500' : 'text-green-400'}`}>
+                        {booking.status === 'completed' ? 'Delivered!' : 'Delivery'}
+                      </div>
+                      <div className="text-sm text-neutral-400">
+                        {booking.status === 'completed' && booking.completed_at
+                          ? new Date(booking.completed_at).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : hoursRemaining > 0
+                            ? `Estimated delivery within ${hoursRemaining}h`
+                            : 'Pending delivery'
+                        }
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Cancelled Status */}
+                {booking.status === 'cancelled' && (
+                  <div className="flex gap-4 relative">
+                    <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0 z-10">
+                      <XCircle className="w-5 h-5 text-red-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold mb-1 text-red-400">Cancelled</div>
+                      <div className="text-sm text-neutral-400">
+                        This booking was cancelled
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Refunded Status */}
+                {booking.status === 'refunded' && (
+                  <div className="flex gap-4 relative">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0 z-10">
+                      <RefreshCw className="w-5 h-5 text-orange-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold mb-1 text-orange-400">Refunded</div>
+                      <div className="text-sm text-neutral-400">
+                        Payment has been refunded
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

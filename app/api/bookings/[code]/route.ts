@@ -2,6 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+// Helper function to enrich booking with payment info (for timeline)
+async function enrichBookingWithPayment(supabase: SupabaseClient, booking: BookingWithTalent): Promise<BookingWithTalent> {
+  // Fetch payment details for timeline
+  const { data: paymentData } = await supabase
+    .from('payments')
+    .select('id, gateway, reference, status, created_at')
+    .eq('booking_id', booking.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  return {
+    ...booking,
+    payment: paymentData ? {
+      id: paymentData.id,
+      gateway: paymentData.gateway,
+      reference: paymentData.reference,
+      status: paymentData.status,
+      created_at: paymentData.created_at,
+    } : undefined,
+  };
+}
+
 // Helper function to enrich booking data with customer and payment info for admins
 async function enrichBookingForAdmin(supabase: SupabaseClient, booking: BookingWithTalent): Promise<BookingWithTalent> {
   // Fetch customer details
@@ -180,9 +203,11 @@ export async function GET(
         }
       }
 
+      // Enrich with payment data for timeline
+      const enrichedBooking = await enrichBookingWithPayment(supabase, bookingById);
       return NextResponse.json({
         success: true,
-        data: bookingById,
+        data: enrichedBooking,
       });
     }
 
@@ -219,9 +244,11 @@ export async function GET(
       }
     }
 
+    // Enrich with payment data for timeline
+    const enrichedBooking = await enrichBookingWithPayment(supabase, booking);
     return NextResponse.json({
       success: true,
-      data: booking,
+      data: enrichedBooking,
     });
 
   } catch (error: any) {
