@@ -1405,8 +1405,14 @@ function DashboardContent() {
                 <Button
                   className="mt-4 w-full"
                   size="sm"
-                  onClick={() => setShowPayoutModal(true)}
-                  disabled={(stats?.totalEarnings || 0) <= 0}
+                  onClick={() => {
+                    console.log('[Payout] Button clicked, totalEarnings:', stats?.totalEarnings);
+                    if ((stats?.totalEarnings || 0) <= 0) {
+                      alert('No balance available for payout. Complete bookings to start earning!');
+                      return;
+                    }
+                    setShowPayoutModal(true);
+                  }}
                 >
                   <Banknote className="w-4 h-4 mr-2" />
                   Request Payout
